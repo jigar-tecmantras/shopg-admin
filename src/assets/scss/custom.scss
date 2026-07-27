@@ -1,0 +1,208 @@
+$color_1: #337AB7;
+$border-color_1: #d6d6d6;
+
+.preview-select-img {
+	width: 115px;
+	box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.12);
+	border: 3px solid #d2d6de;
+	padding: 3px;
+}
+.img-circle {
+	border-radius: 50%;
+	object-fit: cover;
+}
+.avatar-upload {
+	position: relative;
+	max-width: 125px;
+	margin-bottom: 20px;
+	.avatar-edit {
+		position: absolute;
+		right: 12px;
+		z-index: 1;
+		top: 82px;
+		input {
+			display: none;
+			+ {
+				label {
+					display: inline-block;
+					width: 34px;
+					height: 34px;
+					margin-bottom: 0;
+					border-radius: 100%;
+					background: #FFFFFF;
+					border: 1px solid #d2d6de;
+					box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, 0.12);
+					cursor: pointer;
+					font-weight: normal;
+					transition: all 0.2s ease-in-out;
+					&:hover {
+						background: #f1f1f1;
+						border-color: $border-color_1;
+					}
+					&:after {
+						content: "";
+						color: $color_1;
+						position: absolute;
+						left: 0;
+						right: 0;
+						text-align: center;
+						line-height: 34px;
+						margin: auto;
+					}
+				}
+			}
+		}
+	}
+}
+.required-mark {
+	margin-left: 5px;
+	color: red;
+}
+
+
+.dropzone .image-container {
+    cursor: grabbing;
+}
+
+.card-height{
+	height: 143px;
+}
+.report-download .flatpickr-input{
+	border: none !important;
+  width: 10px !important;
+}
+.flatpickr-monthSelect-months{
+      padding: 20px;
+    display: flex;
+    gap: 28px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+.flatpickr-monthSelect-months .flatpickr-monthSelect-month{
+  cursor: pointer;
+}
+.flatpickr-monthSelect-months .flatpickr-monthSelect-month:hover{
+    cursor: pointer;
+    outline: 0;
+}
+.flatpickr-calendar.animate.flatpickr-monthSelect-theme-light{
+	right: 100px !important;
+	left: auto !important;
+}
+#btnDate{
+  width: 0px !important;
+}
+.report-download-year input{
+  border: none !important;
+  width: 0px !important;
+}
+// .0B1729
+[data-bs-theme='dark'] {
+  .msger-chat {
+    background: #0B1729 !important;
+  }
+  .msg-bubble{
+    background-color: #0E203A;
+  }
+  .avatar-upload .avatar-edit input + label{
+	  background: #0B1729;
+	}
+// 	.required-mark {
+// 	color: #ff6a6a;
+// }
+}
+#uniqueEditorContainer .ck.ck-blurred.ck-content.ck-editor__editable.ck-editor__editable_inline.ck-rounded-corners {
+  max-height: 245px;
+  overflow-y: auto;
+}
+#uniqueEditorContainer .ck.ck-focused.ck-content.ck-editor__editable.ck-editor__editable_inline.ck-rounded-corners {
+  max-height: 245px;
+  overflow-y: auto;
+}
+.date-and-month-picker .react-datepicker__input-container input{
+	  border: none !important;
+  width: 0px !important;
+  z-index: -10000;
+    position: relative;
+    left: -60px;
+	top: 9px;
+}
+.invalid-feedback {
+  color: red !important;
+}
+.required-mark{
+	color: red !important;
+}
+// .0B1729
+[data-bs-theme='dark'] {
+  .msger-chat {
+    background: #0B1729 !important;
+  }
+  .msg-bubble{
+    background-color: #0E203A;
+  }
+  .avatar-upload .avatar-edit input + label{
+	  background: #0B1729;
+	}
+	.required-mark {
+	color: red !important;
+}
+}
+
+.card-height-order{
+	height: 280px;
+	overflow: auto;
+}
+.clickable-text {
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.clickable-text:hover {
+  color: blue;
+  text-decoration: none;
+   transition: color 0.2s;
+}
+.carousel-control-prev-icon,
+      .carousel-control-next-icon {
+        background-color: black; /* Change arrow color to black */
+      }
+
+
+//
+
+/* Cover spin overlay */
+#cover-spin1 {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+  z-index: 9999; /* Ensure it's above other elements */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Spinner styles */
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1); /* Light border */
+  border-left-color: #ffffff; /* White spinner */
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+/* Spinner animation */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}

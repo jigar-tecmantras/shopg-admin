@@ -1,0 +1,45 @@
+// Include Both Helper File with needed methods
+// action
+
+import ApiUtils from 'api/ApiUtils';
+import {toast} from 'react-toastify';
+import {setFlushState} from './reducer';
+
+// Is user register successfull then direct plot user in redux.
+export const changeStatus =
+  (statusValue: any, selectedIds: any[], type: string) =>
+  async (dispatch: any) => {
+    try {
+      if (type === 'category') {
+        const reqBody: any = {
+          category_id: selectedIds,
+          status: statusValue,
+        };
+        ApiUtils.updateCategoryStatus(reqBody)
+          .then((data: any): any => {
+            // console.log(data?.message);
+            toast.success(data?.message);
+            dispatch(setFlushState());
+          })
+          .catch((error: any) => {
+            toast.error(error.message);
+          });
+      } else {
+        const reqBody: any = {
+          product_id: selectedIds,
+          status: statusValue,
+        };
+        ApiUtils.updateProductStatus(reqBody)
+          .then((data: any): any => {
+            // console.log(data?.message);
+            toast.success(data?.message);
+            dispatch(setFlushState());
+          })
+          .catch((error: any) => {
+            toast.error(error.message);
+          });
+      }
+    } catch (error) {
+      // console.log(error);
+    }
+  };

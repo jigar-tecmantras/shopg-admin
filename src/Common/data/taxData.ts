@@ -1,0 +1,81 @@
+const taxData = [
+  {
+    id: 1,
+    discount: '$15.9',
+    hsnTitle: 'Cloth',
+    code: 'WINTER145',
+    status: 'Active',
+  },
+  {
+    id: 2,
+    discount: '50%',
+    hsnTitle: 'Grossory',
+    code: 'FRIDAY50',
+    status: 'Active',
+  },
+  {
+    id: 3,
+    discount: '20%',
+    hsnTitle: 'Electronics',
+    code: 'TONER20',
+    status: 'Expired',
+  },
+  {
+    id: 4,
+    discount: '$10',
+    hsnTitle: 'Phone',
+    code: 'CYBER10',
+    status: 'Expired',
+  },
+  {
+    id: 5,
+    discount: '60%',
+    hsnTitle: 'tablet',
+    code: 'SALES60',
+    status: 'Active',
+  },
+  {
+    id: 6,
+    discount: '$15',
+    hsnTitle: 'Laptop',
+    code: 'FESTIVAL15',
+    status: 'Expired',
+  },
+  {
+    id: 7,
+    discount: '40%',
+    hsnTitle: 'Mean Wears',
+    code: 'SUMMER40',
+    status: 'Expired',
+  },
+  {
+    id: 8,
+    discount: '20%',
+    hsnTitle: 'Kids Wears',
+    code: 'CHRISTMAS20',
+    status: 'Active',
+  },
+  {
+    id: 9,
+    discount: '$10',
+    hsnTitle: 'Pot',
+    code: 'SUMMER10',
+    status: 'Expired',
+  },
+  {
+    id: 10,
+    discount: '$25',
+    hsnTitle: 'Jeans',
+    code: 'FESTIVAL15',
+    status: 'Active',
+  },
+  {
+    id: 11,
+    discount: '$10',
+    hsnTitle: 'T-shirt',
+    code: 'CYBER10',
+    status: 'Expired',
+  },
+];
+
+export {taxData};

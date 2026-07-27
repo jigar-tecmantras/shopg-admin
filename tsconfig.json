@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "types": ["jest", "node"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "baseUrl": "./src", // This must be specified if "paths" is.
+    //   "paths": {
+    //      "@component/*": ["Components/views/*"],
+    //      "@common/*": ["Components/Common/*"],
+    //      "@assets/*": ["src/assets/*"],
+    //      "@shared/*": ["app/_shared/*"],
+    //      "@helpers/*": ["helpers/*"]
+    //  },
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react"
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "src/config.js"],
+  "exclude": ["node_modules", "ckeditor.js","html2pdf.js"]
+}

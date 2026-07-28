@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import ApiUtils from 'api/ApiUtils';
 import {toast} from 'react-toastify';
 import {ToasterMessage} from 'helpers/ToastHelper';
+import ImagePreviewModal from 'Common/imagePreviewModal';
 
 interface Status {
   id: number;
@@ -39,6 +40,9 @@ const BrandsList = (): JSX.Element => {
 
   const [brandList, setBrandList] = useState<any>();
 
+  const [showImagePreview, setShowImagePreview] = useState(false);
+  const [previewImage, setPreviewImage] = useState('');
+
   useEffect(() => {
     setPageValue(defaultPage);
     setShouldFetch(!shouldFetch);
@@ -64,19 +68,18 @@ const BrandsList = (): JSX.Element => {
   const handleSearch = (value: string): void => {
     setSearch(value);
   };
-  function modalToggle(): void {
-    if (modalFlag) {
-      setEditData(undefined);
-    }
-    setModalFlag(!modalFlag);
-  }
-
-  const handleEdit = (data: any): any => {
+  const handleEdit = (data: any): void => {
+    console.log("================>",data)
     setEditData(data);
-    modalToggle();
+    setModalFlag(true);
   };
 
-  const handleClose = (): any => {
+  const handleAddBrand = (): void => {
+    setEditData(undefined);
+    setModalFlag(true);
+  };
+
+  const handleClose = (): void => {
     setModalFlag(false);
     setEditData(undefined);
   };
@@ -153,6 +156,35 @@ const BrandsList = (): JSX.Element => {
         accessor: 'name',
       },
       {
+      Header: 'Image',
+      accessor: 'image',
+      disableFilters: true,
+      filterable: false,
+      Cell: ({ row }: any) => {
+        const image = row.original.image;
+
+        return image ? (
+          <img
+            src={image}
+            alt={row.original.name}
+            className="rounded border"
+            style={{
+              width: 100,
+              height: 100,
+              objectFit: 'contain',
+              cursor: 'pointer',
+            }}
+            onClick={() => {
+              setPreviewImage(image);
+              setShowImagePreview(true);
+            }}
+          />
+        ) : (
+          <span className="text-muted">-</span>
+        );
+      },
+    },
+      {
         Header: 'Action',
 
         disableFilters: true,
@@ -224,7 +256,7 @@ const BrandsList = (): JSX.Element => {
                 SearchPlaceholder="Search Brands..."
                 buttonText="Add Brand"
                 onClick={() => {
-                  modalToggle();
+                  handleAddBrand();
                 }}
                 sortColumn={sortColumn}
                 sortDirection={sortDirection}
@@ -242,7 +274,7 @@ const BrandsList = (): JSX.Element => {
 
       <ModalContainer
         showModal={modalFlag}
-        handleClose={modalToggle}
+        handleClose={handleClose}
         modalTitle={editData !== undefined ? 'Edit Brand' : 'Add Brand'}
         modalBody={
           <AddBrand
@@ -252,6 +284,16 @@ const BrandsList = (): JSX.Element => {
           />
         }
       />
+
+      <ImagePreviewModal
+        show={showImagePreview}
+        handleClose={() => {
+          setShowImagePreview(false);
+          setPreviewImage('');
+        }}
+        image={previewImage}
+      />
+
     </Col>
   );
 };

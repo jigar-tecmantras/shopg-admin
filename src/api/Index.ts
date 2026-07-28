@@ -24,7 +24,9 @@ instance.interceptors.request.use(
       config.url === 'api/common/update-category' ||
       config.url === '/api/common/update-delivery-person' ||
       config.url === '/api/common/create-delivery-person' ||
-      config.url === '/api/common/create-product-discount-by-excel'
+      config.url === '/api/common/create-product-discount-by-excel' ||
+      config.url === '/api/common/create-brand' ||
+      config.url === '/api/common/update-brand' 
     ) {
       config.headers['Content-Type'] = 'multipart/form-data';
     } else {

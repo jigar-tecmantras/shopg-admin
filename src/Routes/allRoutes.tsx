@@ -27,7 +27,6 @@ import ReviewsAndRatings from 'pages/Reviews & Ratings';
 import StockMangement from 'pages/StockManagement';
 import Coupons from 'pages/Coupons';
 import DiscountListing from 'Discounts/DiscountListing';
-import policyList from 'pages/Policy';
 import CouponAnalysis from 'pages/Coupons/Coupon-analysis';
 import Reviews from 'pages/Reviews & Ratings/Reviews';
 import DeliveryList from 'pages/DeliveryMangement/DeliveryList';
@@ -39,6 +38,9 @@ import UserList from 'pages/UserList';
 import Wishlist from 'pages/Wishlist';
 
 import AreaSpecificSales from 'pages/Area-Sales';
+
+import Policy from 'pages/Policy';
+import PolicyAdd from 'pages/Policy/PolicyAdd';
 
 const authProtectedRoutes = [
   {path: '/dashboard', component: Dashboard},
@@ -65,7 +67,6 @@ const authProtectedRoutes = [
   {path: '/reviews-ratings', component: ReviewsAndRatings},
   {path: '/reviews-ratings/:id', component: Reviews},
   {path: '/payment-tracking', component: PaymentTrackingList},
-  {path: '/policy-list', component: policyList},
   {path: '/analysis', component: CouponAnalysis},
   {path: '/delivery-management', component: DeliveryList},
   {path: '/banner', component: BannersList},
@@ -75,6 +76,10 @@ const authProtectedRoutes = [
   {path: '/wishlist', component: Wishlist},
 
   {path: '/area-specific-sales', component: AreaSpecificSales},
+
+  {path: '/policy-list', component: Policy},
+  {path: '/policy-add', component: PolicyAdd},
+  {path: '/policy-update/:id', component: PolicyAdd},
 ];
 
 const publicRoutes = [

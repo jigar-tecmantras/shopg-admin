@@ -298,7 +298,7 @@ const Navdata = (): React.JSX.Element => {
     },
     {
       id: 'policy',
-      label: 'Policy',
+      label: 'Policy Mangement',
       icon: 'bi bi-tag',
       link: '/policy-list',
       click: (e: any) => {

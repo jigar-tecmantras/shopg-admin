@@ -642,6 +642,14 @@ const ApiUtils = {
       endpoint: `${apiEndpoints.GET_WISHLISTED_ITEM}?${params}`,
     }),
     
+  getAreaSpecificSalesList: async (params: any) => {
+    return await genericApiCall({
+      method: 'GET',
+      endpoint: `${apiEndpoints.GET_AREA_SPECIFIC_SALES}${params}`,
+    });
+  },
+
+  
 };
 
 export default ApiUtils;

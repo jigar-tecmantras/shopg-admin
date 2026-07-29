@@ -108,6 +108,8 @@ const apiEndpoints = {
   DELET_CUSTOMER: '/api/admin/delete-customer',
 
   GET_WISHLISTED_ITEM: '/api/common/get-wishlist',
+
+  GET_AREA_SPECIFIC_SALES: '/api/admin/list-area-specific-sale',
 };
 
 export {apiEndpoints};

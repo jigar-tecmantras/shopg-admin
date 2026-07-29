@@ -36,6 +36,10 @@ import BannersList from 'pages/Banners';
 
 import UserList from 'pages/UserList';
 
+import Wishlist from 'pages/Wishlist';
+
+import AreaSpecificSales from 'pages/Area-Sales';
+
 const authProtectedRoutes = [
   {path: '/dashboard', component: Dashboard},
   {path: '/update-profile', component: UpdateProfile},
@@ -67,6 +71,10 @@ const authProtectedRoutes = [
   {path: '/banner', component: BannersList},
 
   {path: '/user-list', component: UserList},
+
+  {path: '/wishlist', component: Wishlist},
+
+  {path: '/area-specific-sales', component: AreaSpecificSales},
 ];
 
 const publicRoutes = [

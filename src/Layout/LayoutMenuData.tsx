@@ -259,6 +259,26 @@ const Navdata = (): React.JSX.Element => {
       },
     },
     {
+      id: 'wishlist',
+      label: 'Wishlist',
+      icon: 'bi bi-heart',
+      link: '/wishlist',
+      click: (e: any) => {
+        e.preventDefault();
+        handlePageNavigation(e, '/wishlist');
+      },
+    },
+    {
+      id: 'areaSpecificSales',
+      label: 'Area Specific Sales',
+      icon: 'bi bi-tag',
+      link: '/area-specific-sales',
+      click: (e: any) => {
+        e.preventDefault();
+        handlePageNavigation(e, '/area-specific-sales');
+      },
+    },
+    {
       id: 'stockmanagement',
       label: 'Stock Management',
       icon: 'bi bi-box',

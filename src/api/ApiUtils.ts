@@ -635,6 +635,13 @@ const ApiUtils = {
       endpoint: apiEndpoints.DELET_CUSTOMER,
       data: params,
     }),
+
+  getWishlistedItem: async (params: any) =>
+    await genericApiCall({
+      method: 'GET',
+      endpoint: `${apiEndpoints.GET_WISHLISTED_ITEM}?${params}`,
+    }),
+    
 };
 
 export default ApiUtils;

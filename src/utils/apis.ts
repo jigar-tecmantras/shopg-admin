@@ -106,6 +106,8 @@ const apiEndpoints = {
   GET_CUSTOMER_LIST: '/api/admin/get-customer',
   UPDATE_CUSTOMER: '/api/admin/update-customer',
   DELET_CUSTOMER: '/api/admin/delete-customer',
+
+  GET_WISHLISTED_ITEM: '/api/common/get-wishlist',
 };
 
 export {apiEndpoints};

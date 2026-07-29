@@ -649,7 +649,37 @@ const ApiUtils = {
     });
   },
 
+  policyList: async (params: any) =>
+    await genericApiCall({
+      method: 'GET',
+      endpoint: `${apiEndpoints.GET_POLICY_LIST}?${params}`,
+    }),
+
+  deletePolicy: async (params: any) =>
+    await genericApiCall({
+      method: 'DELETE',
+      endpoint: `${apiEndpoints.DELETE_POLICY}?${params}`,
+    }),
   
+  addPolicy: async (params: any) =>
+    await genericApiCall({
+      method: 'POST',
+      endpoint: apiEndpoints.ADD_POLICY,
+      data: params,
+    }),
+
+  getSinglePolicy: async (params: any) =>
+    await genericApiCall({
+      method: 'GET',
+      endpoint: `${apiEndpoints.GET_POLICY_LIST}?id=${params}`,
+    }),
+    
+  updatePolicy: async (params: any) =>
+    await genericApiCall({
+      method: 'POST',
+      endpoint: apiEndpoints.UPDATE_POLICY,
+      data: params,
+    }),
 };
 
 export default ApiUtils;

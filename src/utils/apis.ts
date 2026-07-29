@@ -61,7 +61,6 @@ const apiEndpoints = {
   CREATE_TEPLATE: '/api/common/create-template',
 
   UPDATE_ORDER_STATUS: '/api/common/update-order-status',
-  GET_POLICY_LIST: '/api/common/get-policy',
   PRODUCT_LIST_BY_ID: 'api/common/get-product',
   GET_DASHBOARD_DATA: '/api/common/get-dashboard-data',
   GET_PROFILE: '/api/common/get-profile',
@@ -110,6 +109,11 @@ const apiEndpoints = {
   GET_WISHLISTED_ITEM: '/api/common/get-wishlist',
 
   GET_AREA_SPECIFIC_SALES: '/api/admin/list-area-specific-sale',
+
+  GET_POLICY_LIST: '/api/admin/get-policy',
+  DELETE_POLICY: '/api/admin/delete-policy',
+  ADD_POLICY: '/api/admin/create-policy',
+  UPDATE_POLICY: '/api/admin/update-policy',
 };
 
 export {apiEndpoints};

@@ -617,6 +617,24 @@ const ApiUtils = {
       endpoint: `${apiEndpoints.IMPORT_DISCOUNT}`,
       data: params,
     }),
+
+  getCustomerList: async (params: any) =>
+    await genericApiCall({
+      method: 'GET',
+      endpoint: `${apiEndpoints.GET_CUSTOMER_LIST}?${params}`,
+    }),
+  updateCustomerDetails: async (params: any) =>
+    await genericApiCall({
+      method: 'POST',
+      endpoint: apiEndpoints.UPDATE_CUSTOMER,
+      data: params,
+    }),
+  deleteCustomer: async (params: any) =>
+    await genericApiCall({
+      method: 'POST',
+      endpoint: apiEndpoints.DELET_CUSTOMER,
+      data: params,
+    }),
 };
 
 export default ApiUtils;

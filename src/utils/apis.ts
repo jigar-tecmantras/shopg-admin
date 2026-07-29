@@ -102,6 +102,10 @@ const apiEndpoints = {
   SUBSCRIBERS_LIST: '/api/common/get-newletter',
   DELETE_SUBSCRIBERS: '/api/common/delete-newsletter',
   EXPORT_SUBSCRIBERS: '/api/common/export-newsletter',
+
+  GET_CUSTOMER_LIST: '/api/admin/get-customer',
+  UPDATE_CUSTOMER: '/api/admin/update-customer',
+  DELET_CUSTOMER: '/api/admin/delete-customer',
 };
 
 export {apiEndpoints};

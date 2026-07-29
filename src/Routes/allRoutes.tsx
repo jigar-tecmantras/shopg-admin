@@ -34,6 +34,8 @@ import DeliveryList from 'pages/DeliveryMangement/DeliveryList';
 import Brands from 'pages/Brands';
 import BannersList from 'pages/Banners';
 
+import UserList from 'pages/UserList';
+
 const authProtectedRoutes = [
   {path: '/dashboard', component: Dashboard},
   {path: '/update-profile', component: UpdateProfile},
@@ -63,6 +65,8 @@ const authProtectedRoutes = [
   {path: '/analysis', component: CouponAnalysis},
   {path: '/delivery-management', component: DeliveryList},
   {path: '/banner', component: BannersList},
+
+  {path: '/user-list', component: UserList},
 ];
 
 const publicRoutes = [

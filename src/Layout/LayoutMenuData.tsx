@@ -119,6 +119,16 @@ const Navdata = (): React.JSX.Element => {
       },
     },
     {
+      id: 'userlist',
+      label: 'User List',
+      icon: 'bi bi-person-bounding-box',
+      link: '/user-list',
+      click: (e: any) => {
+        e.preventDefault();
+        handlePageNavigation(e, '/user-list');
+      },
+    },
+    {
       id: 'products',
       label: 'Products',
       icon: 'bi bi-box-seam',

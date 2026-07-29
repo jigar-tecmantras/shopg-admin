@@ -89,6 +89,8 @@ enum DOCUMENT_TITLE {
   STOCK_MANAGEMENT = 'Stock Management | Warehouse',
   delivery_LIST = 'Delivery Management | warehouse',
   SUBSCRIBERS_LIST = 'Subscribers | Warehouse',
+
+  USER_LIST = 'User List | Admin',
 }
 
 enum ORDER_STATUS {

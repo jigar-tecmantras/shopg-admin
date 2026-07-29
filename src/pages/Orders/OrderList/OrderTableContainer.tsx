@@ -497,9 +497,17 @@ const OrderTableContainer = ({
           </tbody>
         </Table>
       </div>
-      {page.length <= 0 && (
-        <div className="text-center fw-bold fs-2 mt-3">
-          {!isLoading && 'No data found'}
+      {page.length <= 0 && !isLoading && (
+        <div className="text-center py-5">
+          <h2
+            className="fw-semibold mb-2"
+            style={{ color: '#878a99' }}
+          >
+            Nothing to Display
+          </h2>
+          <p className="text-muted mb-0">
+            There are no records available at the moment.
+          </p>
         </div>
       )}
       <Row className="align-items-center mt-2 py-2 px-2 gy-2 text-center text-sm-start">

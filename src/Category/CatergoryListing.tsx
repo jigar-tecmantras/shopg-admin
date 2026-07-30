@@ -14,6 +14,7 @@ import {useDispatch, useSelector} from 'react-redux';
 import {setProductIds} from 'slices/statusChange/reducer';
 import {changeStatus} from 'slices/thunk';
 import {useNavigate} from 'react-router-dom';
+import ImagePreviewModal from 'Common/imagePreviewModal';
 
 interface Status {
   id: number;
@@ -62,6 +63,10 @@ const Categories = (): JSX.Element => {
   const [Checked, seChecked] = useState(false);
   const [resetSearchFlag, setResetSearchFlag] = useState(false);
   const [shouldFetch, setShouldFetch] = useState(false);
+
+  const [showImagePreview, setShowImagePreview] = useState(false);
+  const [previewImage, setPreviewImage] = useState('');
+
   const nav = useNavigate();
   const handleProductClick = (cat: any): void => {
     // window.open(
@@ -460,7 +465,14 @@ const Categories = (): JSX.Element => {
         return (
           <React.Fragment>
             {(cell.row.original.image as boolean) ? (
-              <img src={cell.value} width={60} height={60} alt="Player" />
+              <img src={cell.value} width={60} height={60} alt="Player" 
+              style={{
+              cursor: 'pointer',
+            }}
+            onClick={() => {
+              setPreviewImage(cell.value);
+              setShowImagePreview(true);
+            }}/>
             ) : (
               '-'
             )}
@@ -708,6 +720,14 @@ const Categories = (): JSX.Element => {
           }
         />
       </Container>
+      <ImagePreviewModal
+        show={showImagePreview}
+        handleClose={() => {
+          setShowImagePreview(false);
+          setPreviewImage('');
+        }}
+        image={previewImage}
+      />
     </div>
   );
 };

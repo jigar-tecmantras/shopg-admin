@@ -28,6 +28,7 @@ import {variables} from 'utils/constant';
 import {type CategoryDetailsTypes} from 'utils/TypeConfig';
 import {renderCategoryOptions} from 'helpers/CategoryOption';
 import { clearDraft } from 'utils/productDraft';
+import ImagePreviewModal from 'Common/imagePreviewModal';
 
 interface OptionType {
   value: string;
@@ -42,6 +43,9 @@ interface ProductItemType {
   message: string;
 }
 const ProductTable = (): JSX.Element => {
+  const [showImagePreview, setShowImagePreview] = useState(false);
+  const [previewImage, setPreviewImage] = useState('');
+
   const [productItem, setProductItem] = React.useState<
     ProductItemType | undefined
   >();
@@ -669,13 +673,17 @@ const ProductTable = (): JSX.Element => {
                       width={100}
                       height={100}
                       alt="Product image"
-                      style={{objectFit: 'cover', borderRadius: '4px'}}
+                      style={{objectFit: 'cover', borderRadius: '4px',cursor: 'pointer'}}
                       onError={({currentTarget}) => {
                         currentTarget.onerror = null;
                         currentTarget.style.display = 'none';
                         currentTarget.nextElementSibling?.classList.remove(
                           'd-none',
                         );
+                      }}
+                      onClick={() => {
+                        setPreviewImage(mediaUrl);
+                        setShowImagePreview(true);
                       }}
                     />
                   ) : isVideo(mediaUrl) ? (
@@ -904,6 +912,15 @@ const ProductTable = (): JSX.Element => {
             </Col>
           </Row>
         </div>
+
+        <ImagePreviewModal
+          show={showImagePreview}
+          handleClose={() => {
+            setShowImagePreview(false);
+            setPreviewImage('');
+          }}
+          image={previewImage}
+        />
       </Container>
     </div>
   );

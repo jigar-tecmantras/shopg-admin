@@ -91,6 +91,7 @@ enum DOCUMENT_TITLE {
   SUBSCRIBERS_LIST = 'Subscribers | Warehouse',
 
   USER_LIST = 'User List | Admin',
+  WHATSAPP = 'WhatsApp Management | Warehouse',
 }
 
 enum ORDER_STATUS {

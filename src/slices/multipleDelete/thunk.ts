@@ -14,7 +14,7 @@ export const SelectedDeletes =
       const reqBody: any = {
         id: selectedIds,
       };
-      ApiUtils.deleteMultipleProduct(reqBody)
+      ApiUtils.deleteProduct(reqBody)
         .then((data: any): any => {
           // console.log(data?.message);
           toast.success(data?.message);

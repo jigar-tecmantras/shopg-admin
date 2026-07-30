@@ -17,7 +17,7 @@ const apiEndpoints = {
   GET_OPTIONS_BY_ID: '/api/common/get-option',
   CREATE_PRODUCT_OPTION: '/api/common/create-product-option',
   UPDATE_PRODUCT_OPTION: '/api/common/update-product-option',
-  DELETE_PRODUCT_OPTION: '/api/common/delete-product-option-value',
+
   GET_GST_TAX: '/api/common/get-gst-tax?type=Dropdown',
   GET_CATEGORY: '/api/common/get-category?type=Dropdown',
   GET_OPTIONS: '/api/common/get-option?type=Dropdown',
@@ -26,7 +26,7 @@ const apiEndpoints = {
   PRODUCT_LIST: '/api/common/get-product',
   PRODUCT_OPTION_LIST: '/api/common/get-product-option-value',
   DELETE_PRODUCT: '/api/common/delete-product',
-  DELETE_MULTIPLE_PRODUCT: '/api/common/delete-product-option-value',
+
   ADD_CATEGORY: 'api/common/create-category',
   GET_STATUS: 'api/common/get-status',
   UPDATE_CATEGORY: 'api/common/update-category',

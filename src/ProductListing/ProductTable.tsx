@@ -261,7 +261,7 @@ const ProductTable = (): JSX.Element => {
     if (result.isConfirmed) {
       const ids = Array.isArray(Pid) ? Pid : [Pid];
 
-      ApiUtils.deleteMultipleProduct({id: ids})
+      ApiUtils.deleteProduct({id: ids})
         // eslint-disable-next-line unused-imports/no-unused-vars
         .then(async data => {
           await Swal.fire({
@@ -438,9 +438,8 @@ const ProductTable = (): JSX.Element => {
   useEffect(() => {
     if (allChecked) {
       const allMainIds: any = productItem?.data?.data?.map(
-        (item: {id: any}) => item.id,
+        (item: {product_id: any}) => item.product_id,
       ); // Select all by their IDs
-
       setSelectedProductIds(allMainIds);
     } else {
       if (!Checked) {
@@ -557,9 +556,9 @@ const ProductTable = (): JSX.Element => {
                 }
                 value={cell.row.original.id}
                 type="checkbox"
-                checked={selectedProductIds.includes(cell.row.original?.id)}
+                checked={selectedProductIds.includes(cell.row.original?.product_id)}
                 onChange={() => {
-                  handleCheckboxChange(cell.row.original?.id);
+                  handleCheckboxChange(cell.row.original?.product_id);
                 }}
               />
             </div>
@@ -808,7 +807,7 @@ const ProductTable = (): JSX.Element => {
                 variant="danger"
                 className="remove-list mx-2  text-light"
                 onClick={async () => {
-                  await handleDeleteProduct(cellProps.row.original.id);
+                  await handleDeleteProduct(cellProps.row.original.product_id);
                 }}>
                 <i className="ri-delete-bin-fill align-bottom me-2 text-light" />
                 Delete

@@ -776,18 +776,6 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  // const deleteIntialOption = (): void => {
-  //   if (
-  //     formik.initialValues?.option_id !== datastore[formik.values.option_id]
-  //   ) {
-  //     editOptionData?.product_option_value.forEach((v: {id: any}): any => {
-  //       ApiUtils.deleteProductOption(v.id)
-  //         .then((_res: any) => {})
-  //         .catch((_err: any) => {});
-  //     });
-  //   }
-  // };
 
   const handleDragStart = (
     e: React.DragEvent<HTMLDivElement>,

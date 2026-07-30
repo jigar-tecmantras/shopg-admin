@@ -216,12 +216,7 @@ const ApiUtils = {
       endpoint: apiEndpoints.UPDATE_PRODUCT_OPTION,
       data: params,
     }),
-  deleteProductOption: async (params: any) =>
-    await genericApiCall({
-      method: 'DELETE',
-      endpoint: apiEndpoints.DELETE_PRODUCT_OPTION,
-      id: params,
-    }),
+ 
   getProductOptionsById: async (optionId: string) =>
     await genericApiCall({
       method: 'GET',
@@ -279,14 +274,9 @@ const ApiUtils = {
     await genericApiCall({
       method: 'POST',
       endpoint: apiEndpoints.DELETE_PRODUCT,
-      id: params,
-    }),
-  deleteMultipleProduct: async (params: any) =>
-    await genericApiCall({
-      method: 'POST',
-      endpoint: apiEndpoints.DELETE_MULTIPLE_PRODUCT,
       data: params,
     }),
+  
   addCategory: async (params: any) =>
     await genericApiCall({
       method: 'POST',

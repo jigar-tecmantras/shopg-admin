@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-confusing-void-expression */
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 /* eslint-disable no-void */
-import React, {useEffect, useState, useRef} from 'react';
+import React, {useEffect, useState, useRef, useMemo} from 'react';
 import {Button, Card, Form, Row} from 'react-bootstrap';
 import {useLocation, useNavigate} from 'react-router-dom';
 import {CKEditor} from '@ckeditor/ckeditor5-react';
@@ -21,6 +21,11 @@ import {tooltipMessage} from '../../../utils/Tooltips';
 import {useDispatch} from 'react-redux';
 import {setCurrentLocation, setisFormUpdate} from 'slices/location/reducer';
 import Swal from 'sweetalert2';
+
+import {
+  saveDraft,
+  getDraft,
+} from 'utils/productDraft';
 
 interface ProductCommonInterface {
   editData: any;
@@ -46,6 +51,18 @@ const ProductCommon = ({
   const navigate = useNavigate();
   const location = useLocation();
   const [isFormDirty, setIsFormDirty] = useState(false);
+  const isEditMode = productId !== null;
+  const [isBrandDataLoaded, setIsBrandDataLoaded] = useState(false);
+  const [isCategoryDataLoaded, setIsCategoryDataLoaded] = useState(false);
+  const [isGstDataLoaded, setIsGstDataLoaded] = useState(false);
+
+  useEffect(()=>{
+    const draft=getDraft("product_create_draft");
+    if(draft){
+      validationCreateProduct.setValues(draft);
+    }
+
+  },[]);
 
   const handleInputChange: any = (event: any) => {
     // console.log(event, 'event---------');
@@ -85,31 +102,92 @@ const ProductCommon = ({
     }
   };
 
+  const saveDraftFunc = () => {
+
+    saveDraft("product_create_draft",{
+      ...validationCreateProduct.values
+    });
+
+  };
+
+  // Get only changed fields for edit mode
+  const getChangedFields = (currentValues: any, initialValues: any): any => {
+    const changed: any = {};
+    Object.keys(currentValues).forEach(key => {
+      if (currentValues[key] !== initialValues[key]) {
+        changed[key] = currentValues[key];
+      }
+    });
+    return changed;
+  };
+
   const formRef = useRef<HTMLFormElement>(null);
+
+  const initialFormValues = useMemo(
+    () => ({
+      sku: String(
+        editData?.sku ??
+        getDraft("product_create_draft")?.sku ??
+        ''
+      ),
+
+      name:
+        editData?.name ??
+        getDraft("product_create_draft")?.name ??
+        '',
+
+      category_id:
+        editData?.category_id ??
+        getDraft("product_create_draft")?.category_id ??
+        '',
+
+      is_gift_packing:
+        editData?.is_gift_packing ??
+        getDraft("product_create_draft")?.is_gift_packing ??
+        variables.GIFT_INACTIVE_STATUS_ID,
+
+      description:
+        editData?.description ??
+        getDraft("product_create_draft")?.description ??
+        '',
+
+      description_json:
+        editData?.description_json ??
+        getDraft("product_create_draft")?.description_json ??
+        {
+          name:'iphone',
+          colour:'blue'
+        },
+
+      status_id:
+        editData?.status_id ??
+        getDraft("product_create_draft")?.status_id ??
+        variables.PRODUCT_ACTIVE_STATUS_ID,
+
+      gst_tax_id:
+        editData?.gst_tax_id ??
+        getDraft("product_create_draft")?.gst_tax_id ??
+        '',
+
+      category_brand_id:
+        editData?.category_brand_id ??
+        getDraft("product_create_draft")?.category_brand_id ??
+        '',
+    }),
+
+    [editData],
+  );
+
   const validationCreateProduct: any = useFormik({
     // enableReinitialize : use this flag when initial values needs to be changed
     enableReinitialize: true,
 
-    initialValues: {
-      sku: String(editData?.sku ?? ''),
-      name: editData?.name ?? '',
-      category_id: editData?.category_id ?? '',
-      is_gift_packing:
-        editData?.is_gift_packing ?? variables.GIFT_INACTIVE_STATUS_ID,
-      description: editData?.description ?? '',
-      description_json: editData?.description_json ?? {
-        name: 'iphone',
-        colour: 'blue',
-      },
-      status_id: editData?.status_id ?? variables.PRODUCT_ACTIVE_STATUS_ID,
-      gst_tax_id: editData?.gst_tax_id ?? '',
-      category_brand_id: editData?.brand_id ?? '',
-    },
+    initialValues: initialFormValues,
     validationSchema: Yup.object().shape({
       // sku: Yup.string().required('SKU is required'),
       name: Yup.string().required('Name is required'),
-      category_id: Yup.string().required('Category ID is required'),
-      category_brand_id: Yup.string().required('Brand ID is required'),
+      category_id: Yup.string().required('Category Name is required'),
+      category_brand_id: Yup.string().required('Brand Name is required'),
       is_gift_packing: Yup.number().required('Gift Packing field is required'),
       description: Yup.string().required('Description is required'),
       description_json: Yup.object().shape({
@@ -120,90 +198,17 @@ const ProductCommon = ({
       gst_tax_id: Yup.string().required('GST Tax ID is required'),
     }),
     onSubmit: async (values: any) => {
-      try {
-        if (isFormDirty && editData !== undefined) {
-          const result = await Swal.fire({
-            title: 'Are you sure?',
-            text: 'Looks like you made some changes. Want to save them now?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, Save it!',
-          });
-          // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-          if (result.isConfirmed) {
-            const reqBody: any = {
-              // sku: values.sku,
-              name: values.name,
-              category_id: values.category_id,
-              is_gift_packing: values.is_gift_packing,
-              description: values.description,
-              status_id: values.status_id,
-              gst_tax_id: values.gst_tax_id,
-              category_brand_id: values.category_brand_id,
-              // product_tag: values.product_tag,
-            };
-            if (editData !== undefined) {
-              reqBody.id = editData.id;
-            }
-            // Handle API call success
-            const response: any =
-              editData !== undefined
-                ? await ApiUtils.updateProduct(reqBody)
-                : await ApiUtils.addProduct(reqBody);
-            toast.success(response.message);
 
-            editData !== undefined
-              ? navigate(
-                  `/products-edit?productId=${response?.data?.id ?? productId}`,
-                )
-              : navigate(
-                  `/products-create?productId=${
-                    response?.data?.id ?? productId
-                  }`,
-                );
-            setActiveKey(productTabKeys.OPTIONS);
-            dispatch(setisFormUpdate(false));
-            window.scrollTo({top: 0, left: 0, behavior: 'smooth'});
-          }
-        } else {
-          const reqBody: any = {
-            // sku: values.sku,
-            name: values.name,
-            category_id: values.category_id,
-            is_gift_packing: values.is_gift_packing,
-            description: values.description,
-            status_id: values.status_id,
-            gst_tax_id: values.gst_tax_id,
-            category_brand_id: values.category_brand_id,
-            // product_tag: values.product_tag,
-          };
-          if (editData !== undefined) {
-            reqBody.id = editData.id;
-          }
-          // Handle API call success
-          const response: any =
-            editData !== undefined
-              ? await ApiUtils.updateProduct(reqBody)
-              : await ApiUtils.addProduct(reqBody);
-          toast.success(response.message);
+      saveDraft("product_create_draft",values);
 
-          editData !== undefined
-            ? navigate(
-                `/products-edit?productId=${response?.data?.id ?? productId}`,
-              )
-            : navigate(
-                `/products-create?productId=${response?.data?.id ?? productId}`,
-              );
-          setActiveKey(productTabKeys.OPTIONS);
-          dispatch(setisFormUpdate(false));
-          window.scrollTo({top: 0, left: 0, behavior: 'smooth'});
-        }
-      } catch (error: any) {
-        // Handle API call failure
-        toast.error(error.response.data.message);
-      }
+      setActiveKey(productTabKeys.OPTIONS);
+
+      window.scrollTo({
+      top:0,
+      left:0,
+      behavior:'smooth'
+      });
+      
     },
   });
 
@@ -228,11 +233,7 @@ const ProductCommon = ({
         gst_tax_id: true,
       });
 
-      // Stop further execution if there are validation errors
     }
-
-    // Call the submit function if no errors
-    // await validationCreateProduct.handleSubmit();
   };
   const handleTamplateModal = (): any => {
     setTamplateModal(!tamplateModal);
@@ -245,8 +246,11 @@ const ProductCommon = ({
     ApiUtils.getGstTax()
       .then((res: any) => {
         setGstTaxData(res?.data);
+        setIsGstDataLoaded(true);
       })
-      .catch((_err: any) => {});
+      .catch((_err: any) => {
+        setIsGstDataLoaded(true);
+      });
     fetchCategoryList();
     // void fetchStatus();
   }, []);
@@ -255,8 +259,11 @@ const ProductCommon = ({
     ApiUtils.getCategory()
       .then((res: any) => {
         setCategoryData(res?.data);
+        setIsCategoryDataLoaded(true);
       })
-      .catch((_err: any) => {});
+      .catch((_err: any) => {
+        setIsCategoryDataLoaded(true);
+      });
   };
 
   useEffect(() => {
@@ -280,7 +287,7 @@ const ProductCommon = ({
             await ApiUtils.getBrandByCategory(selectedCategory);
           if (response?.data.length > 0) {
             const mappedData: any = response?.data?.map((data: any) => {
-              return {value: data.brand_id, label: data.brand_name};
+              return {value: data.id, label: data.brand_name};
             });
             setBrandData(mappedData);
           } else {
@@ -302,9 +309,12 @@ const ProductCommon = ({
       validationCreateProduct.values.category_id !== ''
     ) {
       void fetchBrandList();
-      validationCreateProduct.values.category_brand_id = '';
+      // Only clear brand in create mode, not in edit mode
+      if (!editData) {
+        validationCreateProduct.values.category_brand_id = '';
+      }
     }
-  }, [validationCreateProduct.values.category_id]);
+  }, [validationCreateProduct.values.category_id, editData]);
 
   useEffect(() => {
     const fetchBrandList = async (): Promise<void> => {
@@ -315,7 +325,7 @@ const ProductCommon = ({
             await ApiUtils.getBrandByCategory(selectedCategory);
           if (response?.data.length > 0) {
             const mappedData: any = response?.data?.map((data: any) => {
-              return {value: data.brand_id, label: data.brand_name};
+              return {value: data.id, label: data.brand_name};
             });
             setBrandData(mappedData);
           } else {
@@ -328,28 +338,39 @@ const ProductCommon = ({
             setBrandData(mappedData);
           }
         }
+        setIsBrandDataLoaded(true);
       } catch (err) {
         toast.error('Something went wrong');
+        setIsBrandDataLoaded(true);
       }
     };
 
     if (editData?.category_id !== undefined) {
+      setIsBrandDataLoaded(false);
       void fetchBrandList();
+    } else {
+      setIsBrandDataLoaded(true);
     }
   }, [editData?.category_id]);
 
-  // const fetchStatus = async (): Promise<void> => {
-  //   try {
-  //     const response: any = await ApiUtils.getStatus(`type=product`);
-  //     setStatusList(response.data);
+  useEffect(() => {
+    const loader: HTMLElement | null = document.getElementById('cover-spin');
 
-  //     const gift: any = await ApiUtils.getStatus(`type=is_gift`);
-  //     setGiftPackingStatusList(gift.data);
-  //   } catch (err: any) {
-  //     ToasterMessage('error', err.message);
-  //   }
-  // };
-  // const [productTitle, setProductTitle] = useState(false);
+
+    const allDataLoaded = isEditMode
+      ? editData && isBrandDataLoaded && isCategoryDataLoaded && isGstDataLoaded
+      : isCategoryDataLoaded && isGstDataLoaded;
+
+    if (!allDataLoaded) {
+      if (loader !== null) {
+        loader.style.display = 'block';
+      }
+    } else {
+      if (loader !== null) {
+        loader.style.display = 'none';
+      }
+    }
+  }, [isEditMode, editData, isBrandDataLoaded, isCategoryDataLoaded, isGstDataLoaded]);
 
   useEffect(() => {
     const handleBeforeUnload: any = (event: BeforeUnloadEvent) => {
@@ -371,6 +392,7 @@ const ProductCommon = ({
   useEffect(() => {
     dispatch(setisFormUpdate(false));
   }, [editData]);
+
   return (
     <>
       <Form
@@ -401,43 +423,7 @@ const ProductCommon = ({
               </div>
             </Card.Header>
             <Card.Body>
-              {/* <div className="mb-3">
-                <div className="d-flex">
-                  <Form.Label htmlFor="sku-input">SKU</Form.Label>
-
-                  <div style={{marginLeft: '10px', position: 'relative'}}>
-                    <TooltipWithInfoIcon text={tooltipMessage.FormSKU} />
-                  </div>
-                </div>
-                <Form.Control
-                  name="sku"
-                  type="text"
-                  className="form-control"
-                  id="sku-input"
-                  placeholder="Enter sku id"
-                  onChange={e => {
-                    validationCreateProduct.handleChange(e);
-                    handleInputChange(e);
-                  }}
-                  onBlur={validationCreateProduct.handleBlur}
-                  value={validationCreateProduct.values.sku ?? ''}
-                  isInvalid={
-                    !!(
-                      Boolean(validationCreateProduct.touched.sku) &&
-                      Boolean(validationCreateProduct.errors.sku)
-                    )
-                  }
-                /> 
-
-                {Boolean(validationCreateProduct.touched.sku) &&
-                Boolean(validationCreateProduct.errors.sku) ? (
-                  <Form.Control.Feedback
-                    type="invalid"
-                    className="required-mark">
-                    {validationCreateProduct.errors.sku}
-                  </Form.Control.Feedback>
-                ) : null} 
-              </div> */}
+              
               <div className="mb-3">
                 <div className="d-flex">
                   <Form.Label htmlFor="name-input">Product title</Form.Label>
@@ -454,6 +440,9 @@ const ProductCommon = ({
                   onChange={e => {
                     validationCreateProduct.handleChange(e);
                     handleInputChange(e);
+                    setTimeout(()=>{
+                      saveDraftFunc();
+                    },0);
                   }}
                   onBlur={validationCreateProduct.handleBlur}
                   value={validationCreateProduct.values.name ?? ''}
@@ -515,6 +504,7 @@ const ProductCommon = ({
                   }}
                   onBlur={(_event: any, editor: any) => {
                     checkEditorContent(editor); // Check editor content on key down
+                    saveDraftFunc();
                   }}
                 />
                 {Boolean(validationCreateProduct.touched.description) &&
@@ -558,6 +548,11 @@ const ProductCommon = ({
                         selectedValue,
                       );
                       handleInputChange(e);
+
+                      setTimeout(()=>{
+                        saveDraftFunc();
+                      },0);
+
                     }}
                     value={validationCreateProduct.values.category_id ?? ''}
                     onBlur={validationCreateProduct.handleBlur}
@@ -609,6 +604,9 @@ const ProductCommon = ({
                       selectedValue,
                     );
                     handleInputChange(e);
+                    setTimeout(()=>{
+                      saveDraftFunc();
+                    },0);
                   }}
                   onBlur={validationCreateProduct.handleBlur}
                   isInvalid={
@@ -656,6 +654,9 @@ const ProductCommon = ({
                       selectedValue,
                     );
                     handleInputChange(e);
+                    setTimeout(()=>{
+                      saveDraftFunc();
+                    },0);
                   }}
                   onBlur={validationCreateProduct.handleBlur}
                   isInvalid={
@@ -703,6 +704,9 @@ const ProductCommon = ({
                       );
                       // handleInputChange(e);
                       handleCheckboxChange(e, e.target.checked, 'status');
+                      setTimeout(()=>{
+                        saveDraftFunc();
+                      },0);
                     }}
                     checked={
                       validationCreateProduct.values.status_id ===
@@ -745,6 +749,9 @@ const ProductCommon = ({
                       selectedValue,
                     );
                     handleCheckboxChange(e, e.target.checked, 'gift');
+                    setTimeout(()=>{
+                      saveDraftFunc();
+                    },0);
                   }}
                   checked={
                     validationCreateProduct.values.is_gift_packing ===
@@ -781,6 +788,9 @@ const ProductCommon = ({
                     className="required-mark"
                     onChange={e => {
                       handleInputChange(e);
+                      setTimeout(()=>{
+                        saveDraftFunc();
+                      },0);
                     }}>
                     {validationCreateProduct.errors.is_gift_packing}
                   </Form.Control.Feedback>
@@ -791,7 +801,7 @@ const ProductCommon = ({
         </Row>
         <div className="text-end mb-3">
           <Button variant="primary" type="submit" className="w-sm">
-            Submit
+            Next
           </Button>
         </div>
       </Form>

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 /* eslint-disable @typescript-eslint/dot-notation */
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Button, Card, Col, Form, Row} from 'react-bootstrap';
 import {useLocation, useNavigate} from 'react-router-dom';
 import Dropzone from 'react-dropzone';
@@ -21,6 +21,12 @@ import Swal from 'sweetalert2';
 import {changeStatus} from 'slices/thunk';
 
 import {variables} from 'utils/constant';
+
+import {
+ getDraft,
+ clearDraft,
+ saveDraft
+} from 'utils/productDraft';
 
 interface Product {
   image: string;
@@ -48,6 +54,72 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
   const dispatch = useDispatch<any>();
   const [isFormDirty, setIsFormDirty] = useState(false);
 
+  // Get only changed fields for edit mode
+  const getChangedFields = (currentValues: any, originalValues: any): any => {
+    const changed: any = {};
+    Object.keys(currentValues).forEach(key => {
+      if (currentValues[key] !== originalValues[key]) {
+        changed[key] = currentValues[key];
+      }
+    });
+    return changed;
+  };
+
+  const prepareImages = (images:any[], isEdit:boolean) => {
+
+  let deletedCount = 0;
+
+  return images
+    .map((img, index) => {
+
+      if(img.type === 'delete' && img.id){
+        return isEdit
+          ? {
+              id: img.id,
+              type: 'delete'
+            }
+          : undefined;
+      }
+
+      // Handle File objects (new uploads)
+      if(img.image instanceof File){
+        return isEdit
+          ? {
+              image: img.image,
+              id: -1,
+              sort_order: index - deletedCount + 1
+            }
+          : img.image;
+      }
+
+      // Handle existing images (edit mode)
+      if(
+        isEdit &&
+        img.id &&
+        img.image &&
+        img.type !== 'delete'
+      ){
+        return {
+          id: img.id,
+          sort_order: img.sort_order
+        };
+      }
+
+      // Handle localStorage images with path property (edit mode without id)
+      if(isEdit && img.image && typeof img.image === 'object' && img.image.path){
+        return {
+          image: img.image,
+          id: -1,
+          sort_order: index - deletedCount + 1
+        };
+      }
+
+      return undefined;
+
+    })
+    .filter(Boolean);
+};
+
   const handleInputChange: any = (event: any) => {
     setIsFormDirty(event.target.value.length > 0);
     dispatch(setisFormUpdate(event.target.value.length > 0));
@@ -70,24 +142,12 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
   }, [isFormDirty]);
 
   const productOptionValueSchema = Yup.object().shape({
-    option_id: Yup.string().required('option is required'),
-    product_id: Yup.string().required('product id is required'),
+  
     product_option_value: Yup.array().of(
       Yup.object().shape({
         sku: Yup.string().required('SKU is required'),
         id: Yup.string().optional(),
-        product_id: Yup.string().required('product id is required'),
-        option_value_id: Yup.string()
-          .required('option value is required')
-          .test('not-disallowed', 'Invalid option value', value => {
-            // Check if value is not NaN, null, blank, or 0
-            return value !== null && value !== '' && value !== '0';
-          }),
 
-        //  &&!Number.isNaN(Number(value))
-        // quantity: Yup.number()
-        //   .positive('Quantity must be in positive')
-        //   .required('quantity is required'),
         quantity: Yup.number()
           .required('Quantity is required')
           .typeError('Quantity is required'),
@@ -95,14 +155,18 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
           .positive('Price must be in positive')
           .required('Price is required')
           .typeError('Price is required'),
-        // special_price: Yup.number()
-        //   .positive('Special Price must be in positive')
-        //   .required('special price is required'),
 
         special_price: Yup.number()
-
           .required('Special Price required')
-          .typeError('Special Price required'),
+          .typeError('Special Price required')
+          .test(
+            'is-less-than-price',
+            'Special Price must be less than or equal to Price',
+            function (value) {
+              const {price} = this.parent;
+              return value !== undefined && value <= price;
+            },
+          ),
         minimum_quantity: Yup.number()
           .required('Minimum Quantity is required')
           .typeError('Minimum Quantity is required')
@@ -111,11 +175,10 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
             'Minimum Quantity must be positive',
             function (value) {
               const {quantity} = this.parent;
-              // Allow 0 only if both quantity and minimum_quantity are 0
               if (quantity === 0 && value === 0) {
                 return true;
               }
-              return value > 0; // Standard positive check
+              return value > 0; 
             },
           )
           .test(
@@ -134,22 +197,7 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
           .positive('Weight must be in positive')
           .required('weight is required')
           .typeError('weight is required'),
-        // weight_id: Yup.string()
-        //   .required('weight class is required')
-        //   .typeError('weight class is required'),
-        length: Yup.number()
-          .positive('Length must be in positive')
-          .required('length is required')
-          .typeError('length is required'),
-        // length_id: Yup.string().required('length class is required'),
-        width: Yup.number()
-          .positive('Width must be in positive')
-          .required('width is required')
-          .typeError('width is required'),
-        height: Yup.number()
-          .positive('Height must be in positive')
-          .required('height is required')
-          .typeError('height is required'),
+        
         disable_after_out_of_stock: Yup.string()
           .required('disable after out of stock is required')
           .typeError('disable after out of stock is required'),
@@ -174,23 +222,29 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
               return value !== undefined && value < special_price;
             },
           ),
-        image: Yup.array().min(1, 'Image is required'),
+        image: Yup.array()
+          .min(1, 'Image is required')
+          .max(5, 'Maximum 5 images allowed')
+          .test('image-types', 'Each file must be an image. | Each image must be of type: jpeg, png, jpg, gif, webp.', function(images) {
+            if (!images || images.length === 0) return true;
+            const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            return images.every((img: any) => {
+              if (img.image instanceof File) {
+                return validTypes.includes(img.image.type);
+              }
+              return true;
+            });
+          }),
       }),
     ),
   });
   const blankProductOptionsObj = {
-    product_id: productId ?? '',
-    option_value_id: '',
     quantity: '',
     price: '',
     special_price: '',
     minimum_quantity: '',
     weight: '',
     weight_id: weightDefualt ?? '',
-    length: '',
-    length_id: lengthDefualt ?? '',
-    width: '',
-    height: '',
     disable_after_out_of_stock: 'false',
     status_id: variables.PRODUCT_OPTION_ACTIVE_STATUS_ID,
     cost_to_company: '',
@@ -200,571 +254,304 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
     image: [],
   };
 
-  const formik: any = useFormik({
-    // enableReinitialize : use this flag when initial values needs to be changed
-    enableReinitialize: true,
-
-    initialValues: {
-      option_id: editOptionData?.option_id ?? '',
-      product_id: productId ?? '',
+  const initialFormikValues = useMemo(
+    () => ({
       product_option_value:
         editOptionData?.product_option_value?.length > 0
           ? editOptionData?.product_option_value
-          : [blankProductOptionsObj],
-    },
+          : [{...blankProductOptionsObj}],
+    }),
+    [editOptionData, productId],
+  );
+
+  const formik: any = useFormik({
+    enableReinitialize: true,
+
+    initialValues: initialFormikValues,
     validationSchema: productOptionValueSchema,
-
-    // onSubmit: async (values: any) => {
-    //   try {
-    //     if (editOptionData) {
-    //       deleteIntialOption();
-    //     }
-    //     if (values?.product_option_value[0]['id']) {
-    //       if (editOptionData) {
-    //         const modifiedData = values?.product_option_value.map(
-    //           (item: any, index: any) => {
-    //             const modifiedImageArray = item.image
-    //               .map((img: any) => {
-    //                 if (img.type === 'delete' && img.id) {
-    //                   return {
-    //                     id: img['id'],
-    //                     type: 'delete',
-    //                   };
-    //                 }
-
-    //                 if (img.type === undefined && img.image instanceof File) {
-    //                   return {
-    //                     image: img.image,
-    //                     sort_order: img['sort_order'],
-    //                     id: -1,
-    //                   };
-    //                 }
-    //                 if (
-    //                   img.type === undefined &&
-    //                   !(img.image instanceof File) &&
-    //                   img['sort_order']
-    //                 ) {
-    //                   return {
-    //                     id: img['id'],
-    //                     sort_order: img['sort_order'],
-    //                   };
-    //                 }
-
-    //                 // Add additional conditions if necessary
-    //                 return undefined; // Return the original item if no conditions are met
-    //               })
-    //               .filter((a: any) => a); // Filter out undefined values
-
-    //             return {
-    //               ...item,
-    //               image:
-    //                 modifiedImageArray.length > 0
-    //                   ? modifiedImageArray
-    //                   : undefined,
-    //             };
-    //           },
-    //         );
-
-    //         values = {
-    //           ...values,
-    //           id: editOptionData.id,
-    //           product_option_value: modifiedData,
-    //         };
-    //       }
-    //     } else {
-    //       const addNewData = values?.product_option_value.map((item: any) => {
-    //         const newImageArray: Array<{
-    //           image?: File | string;
-    //           id?: number;
-    //           type?: string;
-    //         }> = [];
-    //         const sortOrderArray: number[] = [];
-
-    //         item.image.forEach((img: any) => {
-    //           if (img.type === 'delete' && img.id) {
-    //             newImageArray.push({id: img.id, type: 'delete'});
-    //           } else if (img.type === undefined && img.image instanceof File) {
-    //             newImageArray.push({image: img.image, id: -1});
-    //           }
-
-    //           // Assuming sort_order is part of the image object, adjust this condition accordingly
-    //           if (img.sort_order) {
-    //             sortOrderArray.push(img.sort_order);
-    //           }
-    //         });
-
-    //         return {
-    //           ...item,
-    //           image: newImageArray
-    //             .map(imgItem => imgItem.image)
-    //             .filter(img => img !== undefined),
-    //           sort_order: sortOrderArray,
-    //         };
-    //       });
-
-    //       values = {
-    //         ...values,
-    //         // id: editOptionData.id,
-    //         product_option_value: addNewData,
-    //       };
-    //     }
-    //     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    //     console.log(
-    //       'value',
-    //       editOptionData,
-    //       values?.product_option_value[0]['id'],
-    //     );
-    //     const response: any =
-    //       editOptionData && values?.product_option_value[0]['id']
-    //         ? await ApiUtils.editProductOption({...values})
-    //         : await ApiUtils.addProductOption({...values});
-
-    //     toast.success(response.message);
-    //     dispatch(setisFormUpdate(false));
-    //     navigate('/products');
-    //   } catch (error: any) {
-    //     // Handle API call failure
-    //     toast.error(error.response.data.message);
-    //   }
-    // },
 
     onSubmit: async (values: any) => {
       try {
-        // if (editOptionData) {
-        //   deleteIntialOption();
-        // }
-        // console.log('isFormDirty', isFormDirty);
-        if (isFormDirty) {
-          const result = await Swal.fire({
-            title: 'Are you sure?',
-            text: 'Looks like you made some changes. Want to save them now?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, Save it!',
-          });
-          if (result.isConfirmed) {
-            // Check if we are editing existing data
-            if (values?.product_option_value[0]?.id) {
-              if (editOptionData) {
-                const modifiedData = values?.product_option_value.map(
-                  (item: any) => {
-                    // Track the number of deleted images
-                    let deletedImages = 0;
 
-                    const modifiedImageArray = item.image
-                      .map((img: any, index: number) => {
-                        // If image is marked for deletion, keep track and skip in sorting
-                        if (img.type === 'delete' && img.id) {
-                          deletedImages++;
-                          return {id: img['id'], type: 'delete'};
-                        }
+        const result = await Swal.fire({
+          title: 'Are you sure?',
+          text: editOptionData
+            ? 'Do you want to update this product?'
+            : 'Do you want to create this product?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#3085d6',
+          cancelButtonColor: '#d33',
+          confirmButtonText: editOptionData
+            ? 'Yes, Update it!'
+            : 'Yes, Create it!',
+        });
 
-                        // New image uploaded (binary file), assign sort_order properly
-                        if (
-                          img.type === undefined &&
-                          img.image instanceof File
-                        ) {
-                          return {
-                            image: img.image,
-                            sort_order: index - deletedImages + 1,
-                            id: -1,
-                          }; // Adjust sort_order based on deletions and start from 1
-                        }
 
-                        // For existing images (not deleted and not new)
-                        if (
-                          img.type === undefined &&
-                          !(img.image instanceof File) &&
-                          img['sort_order']
-                        ) {
-                          return {id: img['id'], sort_order: img['sort_order']};
-                        }
+        if (!result.isConfirmed) {
+          return;
+        }
 
-                        return undefined; // If no conditions match, skip
-                      })
-                      .filter((a: any) => a); // Filter out undefined values
 
-                    // Return the modified image array with the correct sort order
-                    return {
-                      ...item,
-                      image:
-                        modifiedImageArray.length > 0
-                          ? modifiedImageArray
-                          : undefined,
-                    };
-                  },
-                );
+        // Flatten first product_option_value to top level for API
+        const firstOption = values.product_option_value[0];
 
-                values = {
-                  ...values,
-                  id: editOptionData.id,
-                  product_option_value: modifiedData,
-                };
+        // Helper to convert finalValues to FormData
+        const buildFormData = (obj: any): FormData => {
+          const formData = new FormData();
+          Object.keys(obj).forEach(key => {
+            if (key === 'image' && Array.isArray(obj[key])) {
+              obj[key].forEach((img: any, idx: number) => {
+                if (img instanceof File) {
+                  formData.append(`image[${idx}]`, img);
+                } else if (img && typeof img === 'object') {
+                  Object.keys(img).forEach(imgKey => {
+                    formData.append(`image[${idx}][${imgKey}]`, img[imgKey]);
+                  });
+                }
+              });
+            } else if (obj[key] !== undefined && obj[key] !== null) {
+              if (obj[key] instanceof File) {
+                formData.append(key, obj[key]);
+              } else {
+                formData.append(key, String(obj[key]));
               }
-            } else {
-              // Handle new data (no editing, just adding new options)
-              const addNewData = values?.product_option_value.map(
-                (item: any) => {
-                  const newImageArray: Array<{
-                    sort_order: number;
-                    image?: File | string;
-                    id?: number;
-                    type?: string;
-                  }> = [];
-                  const sortOrderArray: number[] = [];
-
-                  // Process each image
-                  item.image.forEach((img: any, index: number) => {
-                    if (img.type === 'delete' && img.id) {
-                      // Mark image for deletion
-                      newImageArray.push({
-                        id: img.id,
-                        type: 'delete',
-                        sort_order: 0,
-                      });
-                    } else if (
-                      img.type === undefined &&
-                      img.image instanceof File
-                    ) {
-                      // New image upload (binary), we'll assign a sort_order later
-                      newImageArray.push({
-                        image: img.image,
-                        id: -1,
-                        sort_order: 0,
-                      });
-                    }
-
-                    // Collect sort_order for existing images
-                    if (img.sort_order) {
-                      sortOrderArray.push(img.sort_order);
-                    }
-                  });
-
-                  // Renumber the sort_order starting from 1
-                  let sortOrderCount = 1;
-                  newImageArray.forEach(imgItem => {
-                    if (imgItem.image) {
-                      imgItem.sort_order = sortOrderCount; // Assign sequential sort_order starting from 1
-                      sortOrderCount++;
-                    }
-                  });
-
-                  // Return the modified product option values with new images and their correct sort_order
-                  return {
-                    ...item,
-                    image: newImageArray
-                      .map(imgItem => imgItem.image)
-                      .filter(img => img !== undefined),
-                    sort_order: sortOrderArray,
-                  };
-                },
-              );
-
-              values = {...values, product_option_value: addNewData};
             }
+          });
+          return formData;
+        };
 
-            // console.log(
-            //   'value',
-            //   editOptionData,
-            //   values?.product_option_value[0]?.id,
-            // );
+        if (editOptionData) {
 
-            // Call the API based on whether we are editing or adding a new product option
-            const response: any =
-              editOptionData && values?.product_option_value[0]?.id
-                ? await ApiUtils.editProductOption({...values})
-                : await ApiUtils.addProductOption({...values});
+          // Get only changed ProductCommon fields from editOptionData
+          const commonFieldsOriginal = {
+            name: editOptionData.name,
+            category_id: editOptionData.category_id,
+            category_brand_id: editOptionData.category_brand_id,
+            gst_tax_id: editOptionData.gst_tax_id,
+            is_gift_packing: editOptionData.is_gift_packing,
+            description: editOptionData.description,
+          };
 
-            toast.success(response.message);
-            dispatch(setisFormUpdate(false));
-            navigate('/products');
-          }
-        } else {
-          // Check if we are editing existing data
-          if (values?.product_option_value[0]?.id) {
-            if (editOptionData) {
-              const modifiedData = values?.product_option_value.map(
-                (item: any) => {
-                  // Track the number of deleted images
-                  let deletedImages = 0;
+          const currentCommonFields = {
+            name: values.name,
+            category_id: values.category_id,
+            category_brand_id: values.category_brand_id,
+            gst_tax_id: values.gst_tax_id,
+            is_gift_packing: values.is_gift_packing,
+            description: values.description,
+          };
 
-                  const modifiedImageArray = item.image
-                    .map((img: any, index: number) => {
-                      // If image is marked for deletion, keep track and skip in sorting
-                      if (img.type === 'delete' && img.id) {
-                        deletedImages++;
-                        return {id: img['id'], type: 'delete'};
-                      }
+          const changedCommonFields = getChangedFields(currentCommonFields, commonFieldsOriginal);
 
-                      // New image uploaded (binary file), assign sort_order properly
-                      if (img.type === undefined && img.image instanceof File) {
-                        return {
-                          image: img.image,
-                          sort_order: index - deletedImages + 1,
-                          id: -1,
-                        }; // Adjust sort_order based on deletions and start from 1
-                      }
+          // Get changed option fields
+          const originalOptionData = editOptionData?.product_option_value?.[0] || {};
+          const changedOptionFields = getChangedFields(firstOption, originalOptionData);
 
-                      // For existing images (not deleted and not new)
-                      if (
-                        img.type === undefined &&
-                        !(img.image instanceof File) &&
-                        img['sort_order']
-                      ) {
-                        return {id: img['id'], sort_order: img['sort_order']};
-                      }
+          // Only include images if they changed
+          const originalImages = originalOptionData?.image || [];
+          const imagesChanged = JSON.stringify(firstOption.image) !== JSON.stringify(originalImages);
 
-                      return undefined; // If no conditions match, skip
-                    })
-                    .filter((a: any) => a); // Filter out undefined values
+          const finalValues: any = {
+            id: editOptionData.id,
+            ...changedCommonFields,
+            ...changedOptionFields,
+          };
 
-                  // Return the modified image array with the correct sort order
-                  return {
-                    ...item,
-                    image:
-                      modifiedImageArray.length > 0
-                        ? modifiedImageArray
-                        : undefined,
-                  };
-                },
-              );
-
-              values = {
-                ...values,
-                id: editOptionData.id,
-                product_option_value: modifiedData,
-              };
-            }
-          } else {
-            // Handle new data (no editing, just adding new options)
-            const addNewData = values?.product_option_value.map((item: any) => {
-              const newImageArray: Array<{
-                sort_order: number;
-                image?: File | string;
-                id?: number;
-                type?: string;
-              }> = [];
-              const sortOrderArray: number[] = [];
-
-              // Process each image
-              item.image.forEach((img: any, index: number) => {
-                if (img.type === 'delete' && img.id) {
-                  // Mark image for deletion
-                  newImageArray.push({
-                    id: img.id,
-                    type: 'delete',
-                    sort_order: 0,
-                  });
-                } else if (
-                  img.type === undefined &&
-                  img.image instanceof File
-                ) {
-                  // New image upload (binary), we'll assign a sort_order later
-                  newImageArray.push({
-                    image: img.image,
-                    id: -1,
-                    sort_order: 0,
-                  });
-                }
-
-                // Collect sort_order for existing images
-                if (img.sort_order) {
-                  sortOrderArray.push(img.sort_order);
-                }
-              });
-
-              // Renumber the sort_order starting from 1
-              let sortOrderCount = 1;
-              newImageArray.forEach(imgItem => {
-                if (imgItem.image) {
-                  imgItem.sort_order = sortOrderCount; // Assign sequential sort_order starting from 1
-                  sortOrderCount++;
-                }
-              });
-
-              // Return the modified product option values with new images and their correct sort_order
-              return {
-                ...item,
-                image: newImageArray
-                  .map(imgItem => imgItem.image)
-                  .filter(img => img !== undefined),
-                sort_order: sortOrderArray,
-              };
-            });
-
-            values = {...values, product_option_value: addNewData};
+          if (imagesChanged) {
+            finalValues.image = prepareImages(firstOption.image, true);
           }
 
-          // console.log(
-          //   'value',
-          //   editOptionData,
-          //   values?.product_option_value[0]?.id,
-          // );
-
-          // Call the API based on whether we are editing or adding a new product option
+          const formData = buildFormData(finalValues);
           const response: any =
-            editOptionData && values?.product_option_value[0]?.id
-              ? await ApiUtils.editProductOption({...values})
-              : await ApiUtils.addProductOption({...values});
+            await ApiUtils.updateProduct(formData);
+
+          clearDraft("product_option_draft");
+          clearDraft("product_create_draft");
 
           toast.success(response.message);
-          dispatch(setisFormUpdate(false));
-          navigate('/products');
+
         }
-      } catch (error: any) {
-        // Handle API call failure
-        toast.error(error.response?.data?.message || 'An error occurred');
+
+        else {
+
+          // Merge ProductCommon fields from draft for create mode
+          const productCreateDraft = getDraft("product_create_draft");
+          const commonFields = productCreateDraft ? {
+            name: productCreateDraft.name,
+            category_id: productCreateDraft.category_id,
+            category_brand_id: productCreateDraft.category_brand_id,
+            gst_tax_id: productCreateDraft.gst_tax_id,
+            is_gift_packing: productCreateDraft.is_gift_packing,
+            description: productCreateDraft.description,
+          } : {};
+
+          const finalValues = {
+            ...commonFields,
+            ...firstOption,
+            image: prepareImages(firstOption.image, false),
+          };
+
+          const formData = buildFormData(finalValues);
+          const response: any =
+            await ApiUtils.addProduct(formData);
+
+          clearDraft("product_option_draft");
+          clearDraft("product_create_draft");
+
+          toast.success(response.message);
+        }
+
+
+        dispatch(setisFormUpdate(false));
+        navigate('/products');
+
+
+      } catch(error:any) {
+
+        toast.error(
+          error.response?.data?.message ||
+          'An error occurred'
+        );
+
       }
     },
+
+    
   });
 
-  // const validateAndSubmit: any = async () => {
-  //   const errors = await formik.validateForm();
+  useEffect(() => {
+    if (!weightDefualt || !formik.values.product_option_value) return;
 
-  //   if (Object.keys(errors).length > 0) {
-  //     // Scroll to the form if there are errors
-  //     if (formRef.current != null) {
-  //       formRef.current.scrollIntoView({behavior: 'smooth'});
-  //     }
-  //     // Set touched fields to show validation messages
-  //     // Set touched fields to show validation messages
-  //     const touchedFields = {
-  //       option_id: true,
-  //       product_id: true,
-  //       product_option_value: formik.values.product_option_value.map(() => ({
-  //         id: true,
-  //         product_id: true,
-  //         option_value_id: true,
-  //         quantity: true,
-  //         price: true,
-  //         special_price: true,
-  //         minimum_quantity: true,
-  //         disable_after_out_of_stock: true,
-  //         cost_to_company: true,
-  //         image: true,
-  //       })),
-  //     };
-
-  //     // Use setTouched to update touched fields
-  //     formik.setTouched(touchedFields);
-  //     return false; // Stop further execution if there are validation errors
-
-  //     // Stop further execution if there are validation errors
-  //   }
-
-  //   // Call the submit function if no errors
-  //   // await validationCreateProduct.handleSubmit();
-  // };
-  // console.log('Errors:', formik.errors);
-
-  const validateAndSubmit: any = async () => {
-    const errors = await formik.validateForm();
-
-    if (Object.keys(errors).length > 0) {
-      // Scroll to the form if there are general form errors
-      if (formRef.current != null) {
-        formRef.current.scrollIntoView({behavior: 'smooth'});
+    const updatedOptions = formik.values.product_option_value.map((option: any) => {
+      if (!option.weight_id || option.weight_id === '') {
+        return { ...option, weight_id: weightDefualt };
       }
+      return option;
+    });
 
-      // Set touched fields to show validation messages
-      const touchedFields = {
-        option_id: true,
-        product_id: true,
-        product_option_value: formik.values.product_option_value.map(() => ({
-          option_value_id: true,
-          quantity: true,
-          price: true,
-          special_price: true,
-          weight: true,
-          length: true,
-          width: true,
-          height: true,
-          minimum_quantity: true,
-          disable_after_out_of_stock: true,
-          status_id: true,
-          cost_to_company: true,
-          image: true,
-          id: true,
-          product_id: true,
-          product_tag: true,
-          is_new_arrival: true,
-          sku: true,
-        })),
-      };
+    if (JSON.stringify(updatedOptions) !== JSON.stringify(formik.values.product_option_value)) {
+      formik.setFieldValue('product_option_value', updatedOptions);
+    }
+  }, [weightDefualt]);
 
-      console.warn(formik.values.product_option_value.length >= 1);
-      const arr = [
-        'option_value_id',
-        'quantity',
-        'price',
-        'weight',
-        'length',
-        'width',
-        'height',
-        'special_price',
-        'minimum_quantity',
-        'cost_to_company',
-        'disable_after_out_of_stock',
-        'status_id',
-        'image',
-        'product_tag',
-        'sku',
-        'is_new_arrival',
-      ];
+    useEffect(() => {
+  const loadDraftFromStorage = async () => {
+    const draft = getDraft("product_option_draft");
 
-      if (formik.values.product_option_value.length > 0) {
-        arr.forEach((field: string) => {
-          formik.values.product_option_value.forEach(
-            (_: any, index: number) => {
-              // Generate the field id based on the current `field` and `index`
-              const fieldId = `${field}-${index}`;
-              console.warn(fieldId, index);
-              // Check if the field has an error and scroll to the element if it does
-              const fieldError = errors?.product_option_value?.[index]?.[field];
+    if (draft) {
+      let draftWithConvertedImages = { ...draft };
 
-              if (fieldError) {
-                const fieldRef = document.getElementById(fieldId);
-                if (fieldRef) {
-                  fieldRef.scrollIntoView({behavior: 'smooth'});
-                }
+      if (draft.product_option_value) {
+        draftWithConvertedImages.product_option_value = draft.product_option_value.map((option: any) => {
+          if (option.image && Array.isArray(option.image)) {
+            const images = option.image.map((img: any) => {
+              if (img.image && typeof img.image === 'string' && img.image.startsWith('data:image')) {
+                return {
+                  ...img,
+                  image: base64ToFile(img.image, img.path || 'image.jpg'),
+                };
               }
-
-              // Create touched fields object dynamically
-              touchedFields.product_option_value[index][field] = true;
-              formik.setTouched(touchedFields);
-              return false;
-            },
-          );
+              return img;
+            });
+            return { ...option, image: images };
+          }
+          return option;
         });
-        // Use setTouched to update touched fields
-      } else {
-        // Use setTouched to update touched fields
-        formik.setTouched(touchedFields);
-        return false;
       }
-      // Iterate through each product_option_value to check for specific field errors
 
-      return false; // Stop further execution if there are validation errors
+      formik.setValues({
+        ...formik.initialValues,
+        ...draftWithConvertedImages,
+        product_option_value:
+          draftWithConvertedImages.product_option_value ?? [blankProductOptionsObj],
+      });
+    }
+  };
+
+  loadDraftFromStorage();
+}, []);
+
+  const isFirstDraftSave = useRef(true);
+
+  useEffect(() => {
+  if (isFirstDraftSave.current) {
+    isFirstDraftSave.current = false;
+    return;
+  }
+
+  const saveToLocalStorage = async () => {
+    const draftToSave = { ...formik.values };
+
+    if (draftToSave.product_option_value) {
+      draftToSave.product_option_value = await Promise.all(
+        draftToSave.product_option_value.map(async (option: any) => {
+          if (option.image && Array.isArray(option.image)) {
+            const images = await Promise.all(
+              option.image.map(async (img: any) => {
+                if (img.image instanceof File) {
+                  const base64 = await fileToBase64(img.image);
+                  return {
+                    ...img,
+                    image: base64,
+                    path: img.path || img.image.name,
+                  };
+                }
+                return img;
+              })
+            );
+            return { ...option, image: images };
+          }
+          return option;
+        })
+      );
     }
 
-    // Call the submit function if no errors
-    // await validationCreateProduct.handleSubmit();
+    saveDraft("product_option_draft", draftToSave);
   };
+
+  saveToLocalStorage();
+
+}, [formik.values]);
+
+  const validateAndSubmit: any = async () => {
+  const errors = await formik.validateForm();
+
+  if (Object.keys(errors).length === 0) {
+    return;
+  }
+
+  if (formRef.current) {
+    formRef.current.scrollIntoView({
+      behavior: 'smooth',
+    });
+  }
+  console.log("================>",formik.values.product_option_value , errors)
+  const touchedFields = {
+    product_option_value:
+      formik.values.product_option_value?.map(() => ({
+        option_value_id: true,
+        quantity: true,
+        price: true,
+        special_price: true,
+        weight: true,
+        minimum_quantity: true,
+        disable_after_out_of_stock: true,
+        status_id: true,
+        cost_to_company: true,
+        image: true,
+        sku: true,
+        product_tag: true,
+        is_new_arrival: true,
+      })) ?? [],
+  };
+
+  formik.setTouched(touchedFields);
+};
 
   const inputHandler = (e: any, index: number): any => {
     const {name, value} = e.target;
     const data = [...formik.values.product_option_value];
-    // data[index] = {
-    //   ...data[index],
-    //   [e.target.name]: parseFloat(e?.target?.value ?? 0),
-    // };
-
-    // data[index] = {
-    //   ...data[index],
-    //   [name]: name === 'sku' ? value : parseFloat(value ?? '0'),
-    // };
     const parsedValue = name === 'sku' ? value : parseFloat(value || '0');
 
     data[index] = {
@@ -775,72 +562,106 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
 
     formik.setFieldValue('product_option_value', data);
   };
-  // const inputHandler = (e: any, index: number): any => {
-  //   const data = [...formik.values.product_option_value];
-  //   const fieldName = e.target.name;
-  //   const value = parseFloat(e?.target?.value ?? 0);
 
-  //   // Validate if special price is less than price
-  //   if (
-  //     fieldName === 'special_price' &&
-  //     value >= parseFloat(data[index].price)
-  //   ) {
-  //     // Display error message
-  //     formik.setFieldError(
-  //       `product_option_value[${index}].special_price`,
-  //       'Special price must be less than price',
-  //     );
-  //   } else {
-  //     // Update values and clear error message
-  //     data[index] = {
-  //       ...data[index],
-  //       [fieldName]: value,
-  //     };
-  //     formik.setFieldValue('product_option_value', data);
-  //     formik.setFieldError(
-  //       `product_option_value[${index}].special_price`,
-  //       undefined,
-  //     );
-  //   }
-  // };
+  const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+  function validateImageType(file: File): boolean {
+    return VALID_IMAGE_TYPES.includes(file.type);
+  }
+
+  // Convert File to base64 for localStorage serialization
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  // Convert base64 back to File object
+  const base64ToFile = (base64String: string, fileName: string): File => {
+    const arr = base64String.split(',');
+    const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], fileName, { type: mime });
+  };
 
   function handleAcceptedFiles(files: any, index: number): void {
-    const data = [...formik.values.product_option_value];
-    const updatedData = data.map((item, i) => {
-      if (i === index) {
-        const existingImagesCount = item.image.filter(
-          (img: any) => img.id,
-        ).length;
-        const updatedImages = item.image.map(
-          (image: any, imageIndex: number) => ({
-            ...image,
-            sort_order:
-              image.sort_order !== undefined
-                ? image.sort_order
-                : imageIndex + 1,
-          }),
-        );
+  const fieldName = `product_option_value.${index}.image`;
 
-        const newImagesWithSortOrder = files.map(
-          (file: any, fileIndex: number) => ({
-            ...file,
-            sort_order: existingImagesCount + fileIndex + 1,
-            image: file instanceof File ? file : file.image, // Set image property accordingly
-          }),
-        );
-        setIsFormDirty(true);
-        dispatch(setisFormUpdate(true));
-        return {
-          ...item,
-          image: [...updatedImages, ...newImagesWithSortOrder],
-          // special_price: item.special_price_value ?? item.special_price, // 👈 update from same item
-        };
-      }
-      return item;
-    });
-
-    formik.setFieldValue('product_option_value', updatedData);
+  // Validate file types
+  const invalidFiles = files.filter((file: File) => !validateImageType(file));
+  if (invalidFiles.length > 0) {
+    formik.setFieldTouched(fieldName, true, false);
+    formik.setFieldError(
+      fieldName,
+      'Each file must be an image. | Each image must be of type: jpeg, png, jpg, gif, webp.'
+    );
+    return;
   }
+
+  const data = [...formik.values.product_option_value];
+
+  const updatedData = data.map((item, i) => {
+    if (i === index) {
+
+      const activeImages = item.image.filter(
+        (img: any) => img.type !== 'delete'
+      );
+
+      const existingImagesCount = activeImages.filter(
+        (img: any) => img.id
+      ).length;
+
+      const updatedImages = activeImages.map(
+        (image: any, imageIndex: number) => ({
+          ...image,
+          sort_order:
+            image.sort_order !== undefined
+              ? image.sort_order
+              : imageIndex + 1,
+        }),
+      );
+
+      const newImagesWithSortOrder = files.map(
+        (file: any, fileIndex: number) => ({
+          sort_order: existingImagesCount + fileIndex + 1,
+          image: file instanceof File ? file : file.image,
+          path: file.name || (file.image?.name || ''),
+        }),
+      );
+
+      setIsFormDirty(true);
+      dispatch(setisFormUpdate(true));
+
+      return {
+        ...item,
+        image: [...updatedImages, ...newImagesWithSortOrder],
+      };
+    }
+
+    return item;
+  });
+
+  formik.setFieldValue(
+    'product_option_value',
+    updatedData,
+  );
+
+  formik.setFieldTouched(
+    fieldName,
+    true,
+    false,
+  );
+
+  formik.setFieldError(fieldName, undefined);
+}
 
   function handleRemovedFiles(index: number, indexToRemove: number): void {
     const updatedProductOptionValue = formik.values.product_option_value.map(
@@ -848,31 +669,56 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
         if (optionIndex === index) {
           setIsFormDirty(true);
           dispatch(setisFormUpdate(true));
+
+          const updatedImages = option.image.map(
+            (imageItem: any, imageIndex: number) => {
+              if (imageIndex === indexToRemove) {
+                return {
+                  ...imageItem,
+                  type: 'delete',
+                  id: imageItem.id,
+                };
+              }
+
+              return { ...imageItem };
+            },
+          );
+
           return {
             ...option,
-            image: option.image.map((imageItem: any, imageIndex: number) => {
-              if (imageIndex === indexToRemove) {
-                if (imageItem.image) {
-                  // Image URL exists, remove the object
-                  return {...imageItem, type: 'delete', id: imageItem.id};
-                  // return undefined;
-                } else {
-                  // Image is a file, mark for deletion by adding type: 'delete' and id
-                  return {...imageItem, type: 'delete', id: imageItem.id};
-                }
-              } else {
-                return {...imageItem};
-              }
-            }),
+            image: updatedImages,
           };
         }
-        setIsFormDirty(true);
-        dispatch(setisFormUpdate(true));
+
         return option;
       },
     );
 
-    formik.setFieldValue('product_option_value', updatedProductOptionValue);
+    const currentImages =
+      updatedProductOptionValue[index]?.image?.filter(
+        (img: any) => img.type !== 'delete',
+      )?.length || 0;
+
+    const fieldName = `product_option_value.${index}.image`;
+
+    formik.setFieldValue(
+      'product_option_value',
+      updatedProductOptionValue,
+    ).then(() => {
+      formik.setFieldTouched(fieldName, true, false);
+
+      if (currentImages === 0) {
+        formik.setFieldError(
+          fieldName,
+          'Image is required',
+        );
+      } else {
+        formik.setFieldError(
+          fieldName,
+          undefined,
+        );
+      }
+    });
   }
 
   const OptionformRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -884,45 +730,7 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
       lastRef.scrollIntoView({behavior: 'smooth', block: 'center'});
     }
   };
-  const handleAdd = (): any => {
-    const data = [
-      ...formik.values.product_option_value,
-      blankProductOptionsObj,
-    ];
 
-    if (formik.values.option_id !== '') {
-      if (data.length <= optionValue.length) {
-        formik.setFieldValue('product_option_value', data, true);
-        setTimeout(() => handleScrollToBottom(), 0); // Scroll after the re-render
-      } else {
-        toast.error('Cannot add more options than available.');
-      }
-    }
-  };
-
-  // Use useEffect to ensure scroll happens after component re-renders
-
-  const handleRemove = (index: number, id?: number): any => {
-    if (index < 1 && formik.values.product_option_value.length === 1) {
-      toast.error('Do not remove these fields.');
-    } else {
-      if (id) {
-        ApiUtils.deleteProductOption(id)
-          .then((res: any) => {
-            toast.success(res.message);
-          })
-          .catch((_err: any) => {});
-      }
-      const data = [...formik.values.product_option_value];
-      if (index > -1) {
-        data.splice(index, 1);
-      }
-      formik.setFieldValue('product_option_value', data, true);
-      OptionformRefs.current = OptionformRefs.current.slice(0, data.length);
-      setIsFormDirty(true);
-      dispatch(setisFormUpdate(true));
-    }
-  };
   useEffect(() => {
     ApiUtils.getOptions()
       .then((res: any) => {
@@ -939,10 +747,10 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
       .catch((_err: any) => {});
   }, []);
 
-  useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    void fetchOptionValues();
-  }, [formik.values.option_id]);
+  // useEffect(() => {
+  //   // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+  //   void fetchOptionValues();
+  // }, [formik.values.option_id]);
   async function fetchOptionValues(): Promise<void> {
     if (formik.values.option_id) {
       ApiUtils.getOptionValue(formik.values.option_id)
@@ -956,9 +764,9 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
     editOptionData?.product_option_value?.length > 0 &&
     editOptionData?.product_option_value;
   const datastore: any = {};
-  if (optionPrev) {
-    datastore[`${editOptionData?.option_id}`] = editOptionData?.option_id;
-  }
+  // if (optionPrev) {
+  //   datastore[`${editOptionData?.option_id}`] = editOptionData?.option_id;
+  // }
 
   const handleResetForm = (id: any): void => {
     if (datastore[id]) {
@@ -969,17 +777,17 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
   };
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const deleteIntialOption = (): void => {
-    if (
-      formik.initialValues?.option_id !== datastore[formik.values.option_id]
-    ) {
-      editOptionData?.product_option_value.forEach((v: {id: any}): any => {
-        ApiUtils.deleteProductOption(v.id)
-          .then((_res: any) => {})
-          .catch((_err: any) => {});
-      });
-    }
-  };
+  // const deleteIntialOption = (): void => {
+  //   if (
+  //     formik.initialValues?.option_id !== datastore[formik.values.option_id]
+  //   ) {
+  //     editOptionData?.product_option_value.forEach((v: {id: any}): any => {
+  //       ApiUtils.deleteProductOption(v.id)
+  //         .then((_res: any) => {})
+  //         .catch((_err: any) => {});
+  //     });
+  //   }
+  // };
 
   const handleDragStart = (
     e: React.DragEvent<HTMLDivElement>,
@@ -1148,189 +956,27 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
           action="#"
           id="product-options"
           className="needs-validation createCategory-form"
-          onSubmit={e => {
-            e.preventDefault();
-            formik.handleSubmit();
-            validateAndSubmit();
-            // handleInputChange(e);
-          }}>
-          <Card>
-            <Card.Header>
-              <div className="d-flex justify-content-between">
-                <div>
-                  <div className="d-flex">
-                    <Form.Label
-                      className='h5 className="card-title mb-1'
-                      htmlFor="option_id">
-                      Option
-                    </Form.Label>
+          onSubmit={async e => {
+  e.preventDefault();
 
-                    <TooltipWithInfoIcon text={tooltipMessage.SelectOption} />
-                  </div>
-                  <Form.Select
-                    className="form-select"
-                    data-testid="form-select"
-                    id="option_id"
-                    name="option_id"
-                    value={formik.values.option_id ?? ''}
-                    onChange={async e => {
-                      const selectedValue = e.target.value;
-                      formik.setFieldValue('option_id', selectedValue);
-                      handleResetForm(e.target.value);
-                      handleInputChange(e);
-                    }}
-                    onBlur={formik.handleBlur}
-                    isInvalid={
-                      !!(
-                        Boolean(formik.touched.option_id) &&
-                        Boolean(formik.errors.option_id)
-                      )
-                    }>
-                    <option value="" selected>
-                      Select your Option
-                    </option>
-                    {options?.map((option: OptionsType) => (
-                      <option key={option.id} value={option.id}>
-                        {option.name}
-                      </option>
-                    ))}
-                  </Form.Select>
-                  {Boolean(formik.touched.option_id) &&
-                  Boolean(formik.errors.option_id) ? (
-                    <Form.Control.Feedback type="invalid">
-                      {formik.errors.option_id}
-                    </Form.Control.Feedback>
-                  ) : null}
-                </div>
-                <div className="flex-shrink-0">
-                  <Button
-                    className="btn btn-success btn-label btn-hover rounded-pill"
-                    onClick={() => {
-                      handleAdd(); // First function
-                    }}>
-                    <i className="bi bi-box-seam label-icon align-middle rounded-pill fs-16 me-2"></i>{' '}
-                    Add New Option
-                  </Button>
-                </div>
-              </div>
-            </Card.Header>
+  const errors = await formik.validateForm();
+
+  if (Object.keys(errors).length > 0) {
+    validateAndSubmit();
+    return;
+  }
+
+  await formik.submitForm();
+}}>
+          <Card>
             <Card.Body>
               {formik.values.product_option_value.map(
                 (productOption: any, index: number) => {
-                  // Inside your component, before the return or inside a map
 
                   return (
                     <React.Fragment key={index}>
                       <Row>
-                        <Button
-                          type="button"
-                          role="remove"
-                          className="btn btn-danger btn-icon ms-auto"
-                          onClick={() => {
-                            handleRemove(index, productOption?.id);
-                          }}>
-                          <i className="ri-delete-bin-5-line"></i>
-                        </Button>
-                      </Row>
-                      <Row>
-                        <Col lg={3} sm={6}>
-                          <div className="mb-3">
-                            <div
-                              className="d-flex"
-                              ref={el => (OptionformRefs.current[index] = el)}>
-                              <Form.Label htmlFor={`option_value_id-${index}`}>
-                                Option Value
-                              </Form.Label>
-                              <TooltipWithInfoIcon
-                                text={tooltipMessage.SelectOptionValue}
-                              />
-
-                              <Button
-                                type="button"
-                                variant="success"
-                                style={{bottom: '4px'}}
-                                onClick={modalToggleOptionValue}
-                                className="p-1 ml-2 ms-auto">
-                                <i className="mdi mdi-plus" />
-                                Add new
-                              </Button>
-                            </div>
-                            <Form.Select
-                              className="form-select"
-                              id={`option_value_id-${index}`}
-                              name="option_value_id"
-                              value={productOption.option_value_id ?? ''} // This will bind the selected option value
-                              onChange={e => {
-                                const selectedValue = e.target.value;
-
-                                // If the value is '0', do not proceed further
-                                if (selectedValue === '0') {
-                                  return;
-                                }
-
-                                // Update Formik values
-                                const updatedValues = [
-                                  ...formik.values.product_option_value,
-                                ];
-
-                                // Check if the selected option_value_id already exists in the updatedValues
-                                const isAlreadySelected = updatedValues.some(
-                                  (option, idx) =>
-                                    option.option_value_id.toString() ===
-                                      selectedValue && idx !== index,
-                                );
-
-                                if (isAlreadySelected) {
-                                  // If already selected, show the alert and return
-                                  alert(
-                                    'This option has already been selected!',
-                                  );
-                                  return;
-                                }
-
-                                // If not selected, update the value in Formik
-                                updatedValues[index] = {
-                                  ...updatedValues[index],
-                                  [e.target.name]: selectedValue, // Set the selected value
-                                };
-
-                                // Update Formik state with new values
-                                formik.setFieldValue(
-                                  'product_option_value',
-                                  updatedValues,
-                                );
-
-                                handleInputChange(e); // Call any additional custom handler if needed
-                              }}
-                              onBlur={formik.handleBlur} // Mark the field as touched on blur
-                              isInvalid={
-                                !!formik.errors.product_option_value?.[index]
-                                  ?.option_value_id &&
-                                formik.touched.product_option_value?.[index]
-                                  ?.option_value_id
-                              }>
-                              <option value="0">Select your Option</option>
-                              {optionValue?.map((option: OptionsType) => (
-                                <option key={option.id} value={option.id}>
-                                  {option.name}
-                                </option>
-                              ))}
-                            </Form.Select>
-
-                            {/* Display error message after blur */}
-                            {formik.touched.product_option_value?.[index]
-                              ?.option_value_id &&
-                            formik.errors.product_option_value?.[index]
-                              ?.option_value_id ? (
-                              <Form.Control.Feedback type="invalid">
-                                {
-                                  formik.errors.product_option_value[index]
-                                    ?.option_value_id
-                                }
-                              </Form.Control.Feedback>
-                            ) : null}
-                          </div>
-                        </Col>
+                    
                         <Col lg={3} sm={6}>
                           <div className="mb-3">
                             <div className="d-flex">
@@ -1655,254 +1301,7 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
                             ) : null}
                           </div>
                         </Col>
-                        <Col lg={3} sm={6}>
-                          <div className="mb-3">
-                            <div className="d-flex">
-                              <Form.Label htmlFor="stocks-input">
-                                Length
-                              </Form.Label>
-
-                              <TooltipWithInfoIcon
-                                text={tooltipMessage.ProductLength}
-                              />
-                            </div>
-                            <Form.Control
-                              type="number"
-                              className="form-control"
-                              id={`length-${index}`}
-                              name="length"
-                              min={0}
-                              step="0.01"
-                              value={productOption.length ?? ''}
-                              placeholder="Enter length"
-                              onWheel={handleWheel}
-                              onChange={e => {
-                                inputHandler(e, index);
-                                handleInputChange(e);
-                              }}
-                              onBlur={formik.handleBlur}
-                              isInvalid={
-                                !!(
-                                  Boolean(
-                                    formik?.touched?.product_option_value?.[
-                                      index
-                                    ]?.length,
-                                  ) &&
-                                  Boolean(
-                                    formik?.errors?.product_option_value?.[
-                                      index
-                                    ]?.length,
-                                  )
-                                )
-                              }
-                            />
-                            {Boolean(
-                              formik?.touched?.product_option_value?.[index]
-                                ?.length,
-                            ) &&
-                            Boolean(
-                              formik?.errors?.product_option_value?.[index]
-                                ?.length,
-                            ) ? (
-                              <Form.Control.Feedback type="invalid">
-                                {
-                                  formik?.errors?.product_option_value?.[index]
-                                    ?.length
-                                }
-                              </Form.Control.Feedback>
-                            ) : null}
-                          </div>
-                        </Col>
-                        <Col lg={3} sm={6}>
-                          <div className="mb-3">
-                            <div className="d-flex">
-                              <Form.Label htmlFor={`length_id-${index}`}>
-                                Length class
-                              </Form.Label>
-
-                              <TooltipWithInfoIcon
-                                text={tooltipMessage.lengthClass}
-                              />
-                            </div>
-                            <Form.Select
-                              className="form-select"
-                              id={`length_id-${index}`}
-                              name="length_id"
-                              value={
-                                productOption.length_id || lengthDefualt || ''
-                              }
-                              onChange={e => {
-                                const selectedValue = e.target.value;
-                                const data = [
-                                  ...formik.values.product_option_value,
-                                ];
-                                data[index] = {
-                                  ...data[index],
-                                  [e.target.name]: parseFloat(
-                                    selectedValue ?? 0,
-                                  ),
-                                };
-                                formik.setFieldValue(
-                                  'product_option_value',
-                                  data,
-                                );
-                                handleInputChange(e);
-                              }}
-                              onBlur={formik.handleBlur}
-                              isInvalid={
-                                !!(
-                                  Boolean(
-                                    formik?.touched?.product_option_value?.[
-                                      index
-                                    ]?.length_id,
-                                  ) &&
-                                  Boolean(
-                                    formik?.errors?.product_option_value?.[
-                                      index
-                                    ]?.length_id,
-                                  )
-                                )
-                              }>
-                              <option>Select your Length class</option>
-                              {lengthClass?.map((option: OptionsType) => (
-                                <option key={option.id} value={option.id}>
-                                  {option.name}
-                                </option>
-                              ))}
-                            </Form.Select>
-                            {Boolean(
-                              formik?.touched?.product_option_value?.[index]
-                                ?.length_id,
-                            ) &&
-                            Boolean(
-                              formik?.errors?.product_option_value?.[index]
-                                ?.length_id,
-                            ) ? (
-                              <Form.Control.Feedback type="invalid">
-                                {
-                                  formik?.errors?.product_option_value?.[index]
-                                    ?.length_id
-                                }
-                              </Form.Control.Feedback>
-                            ) : null}
-                          </div>
-                        </Col>
-                        <Col lg={3} sm={6}>
-                          <div className="mb-3">
-                            <div className="d-flex">
-                              <Form.Label htmlFor="stocks-input">
-                                Width
-                              </Form.Label>
-
-                              <TooltipWithInfoIcon
-                                text={tooltipMessage.ProductWidth}
-                              />
-                            </div>
-                            <Form.Control
-                              type="number"
-                              className="form-control"
-                              id={`width-${index}`}
-                              name="width"
-                              min={0}
-                              step="0.01"
-                              value={productOption.width ?? ''}
-                              placeholder="Enter width"
-                              onWheel={handleWheel}
-                              onChange={e => {
-                                inputHandler(e, index);
-                                handleInputChange(e);
-                              }}
-                              onBlur={formik.handleBlur}
-                              isInvalid={
-                                !!(
-                                  Boolean(
-                                    formik?.touched?.product_option_value?.[
-                                      index
-                                    ]?.width,
-                                  ) &&
-                                  Boolean(
-                                    formik?.errors?.product_option_value?.[
-                                      index
-                                    ]?.width,
-                                  )
-                                )
-                              }
-                            />
-                            {Boolean(
-                              formik?.touched?.product_option_value?.[index]
-                                ?.width,
-                            ) &&
-                            Boolean(
-                              formik?.errors?.product_option_value?.[index]
-                                ?.width,
-                            ) ? (
-                              <Form.Control.Feedback type="invalid">
-                                {
-                                  formik?.errors?.product_option_value?.[index]
-                                    ?.width
-                                }
-                              </Form.Control.Feedback>
-                            ) : null}
-                          </div>
-                        </Col>
-                        <Col lg={3} sm={6}>
-                          <div className="mb-3">
-                            <div className="d-flex">
-                              <Form.Label htmlFor="stocks-input">
-                                Height
-                              </Form.Label>
-
-                              <TooltipWithInfoIcon
-                                text={tooltipMessage.ProductHeight}
-                              />
-                            </div>
-                            <Form.Control
-                              type="number"
-                              className="form-control"
-                              id={`height-${index}`}
-                              name="height"
-                              min={0}
-                              step="0.01"
-                              value={productOption.height ?? ''}
-                              placeholder="Enter height"
-                              onWheel={handleWheel}
-                              onChange={e => {
-                                inputHandler(e, index);
-                                handleInputChange(e);
-                              }}
-                              onBlur={formik.handleBlur}
-                              isInvalid={
-                                !!(
-                                  Boolean(
-                                    formik?.touched?.product_option_value?.[
-                                      index
-                                    ]?.height,
-                                  ) &&
-                                  Boolean(
-                                    formik?.errors?.product_option_value?.[
-                                      index
-                                    ]?.height,
-                                  )
-                                )
-                              }
-                            />
-                            {Boolean(
-                              formik?.touched?.product_option_value?.[index]
-                                ?.height,
-                            ) &&
-                            Boolean(
-                              formik?.errors?.product_option_value?.[index]
-                                ?.height,
-                            ) ? (
-                              <Form.Control.Feedback type="invalid">
-                                {
-                                  formik?.errors?.product_option_value?.[index]
-                                    ?.height
-                                }
-                              </Form.Control.Feedback>
-                            ) : null}
-                          </div>
-                        </Col>
+                        
                         <Col lg={3} sm={6}>
                           <div className="mb-3">
                             <div className="d-flex">
@@ -2397,7 +1796,7 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
                           <div
                             data-testid="dropzone"
                             className="dropzone my-dropzone">
-                            <Dropzone
+                            {/* <Dropzone
                               onDrop={acceptedFiles => {
                                 handleAcceptedFiles(acceptedFiles, index);
                               }}>
@@ -2409,6 +1808,89 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
                                     <div className="mb-3">
                                       <i className="display-4 text-muted ri-upload-cloud-2-fill" />
                                     </div>
+                                    <h5>Drop files here or click to upload.</h5>
+                                  </div>
+                                </div>
+                              )}
+                            </Dropzone> */}
+
+                            <Dropzone
+                              accept={{
+                                'image/*': [],
+                              }}
+                              maxFiles={5}
+                              onDrop={acceptedFiles => {
+                                const fieldName = `product_option_value.${index}.image`;
+
+                                const invalidFiles = acceptedFiles.filter(
+                                  (file: File) => !validateImageType(file)
+                                );
+
+                                if (invalidFiles.length > 0) {
+                                  formik.setFieldTouched(fieldName, true, false);
+                                  formik.setFieldError(
+                                    fieldName,
+                                    'Each file must be an image. | Each image must be of type: jpeg, png, jpg, gif, webp.'
+                                  );
+                                  return;
+                                }
+
+                                const currentImages =
+                                formik.values.product_option_value[index]?.image?.filter(
+                                  (img: any) => img.type !== 'delete'
+                                ).length || 0;
+
+                                if (currentImages >= 5) {
+                                  formik.setFieldTouched(fieldName, true, false);
+
+                                  formik.setFieldError(
+                                    fieldName,
+                                    'Maximum 5 images are allowed'
+                                  );
+
+                                  return;
+                                }
+
+                                const remainingSlots = 5 - currentImages;
+
+                                if (acceptedFiles.length > remainingSlots) {
+                                  formik.setFieldTouched(fieldName, true, false);
+
+                                  formik.setFieldError(
+                                    fieldName,
+                                    `You can upload only ${remainingSlots} more image(s)`
+                                  );
+
+                                  const filesToAdd = acceptedFiles.slice(0, remainingSlots);
+
+                                  if (filesToAdd.length > 0) {
+                                    handleAcceptedFiles(filesToAdd, index);
+                                  }
+
+                                  return;
+                                }
+
+                                formik.setFieldError(fieldName, undefined);
+
+                                const filesToAdd = acceptedFiles.slice(0, remainingSlots);
+
+                                if (filesToAdd.length > 0) {
+                                  handleAcceptedFiles(filesToAdd, index);
+                                }
+                              }}
+                            >
+                              {({ getRootProps, getInputProps }) => (
+                                <div
+                                  {...getRootProps()}
+                                  className="dropzone dz-clickable text-center"
+                                >
+                                  <input {...getInputProps()} />
+
+                                  <div className="dz-message needsclick">
+                                    <div className="mb-3">
+                                      <i className="display-4 text-muted ri-upload-cloud-2-fill" />
+                                    </div>
+
                                     <h5>Drop files here or click to upload.</h5>
                                   </div>
                                 </div>
@@ -2575,12 +2057,6 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
                                                     />
                                                   )
 
-                                                  // If it's not a File object, use the existing image URL
-                                                  // <img
-                                                  //   className="avatar-sm rounded bg-light"
-                                                  //   alt={f.name}
-                                                  //   src={f.image}
-                                                  // />
                                                 }
                                               </div>
                                             </Col>
@@ -2588,7 +2064,9 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
                                               <p className="text-muted font-weight-bold my-auto">
                                                 {f.image instanceof File
                                                   ? f.path
-                                                  : f.image?.split('/').pop()}
+                                                  : typeof f.image === 'string'
+                                                  ? f.image.split('/').pop()
+                                                  : f.image?.path || f.path}
                                               </p>
                                             </Col>
                                             <Button
@@ -2607,9 +2085,12 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
                                 )}
                             </div>
                           </div>
-                          <div className="error-msg mt-1">
-                            Please add a product images.
-                          </div>
+{formik.touched.product_option_value?.[index]?.image &&
+ formik.errors.product_option_value?.[index]?.image ? (
+  <div className="error-msg mt-1">
+    {formik.errors.product_option_value[index].image}
+  </div>
+) : null}
                           {Boolean(
                             formik?.touched?.product_option_value?.[index]
                               ?.image,

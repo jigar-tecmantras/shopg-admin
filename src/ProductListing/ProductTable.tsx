@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import React, {useEffect, useMemo, useRef, useState} from 'react';
 
-// Debounce hook
 const useDebounce = (value: string, delay: number): string => {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
@@ -28,8 +27,8 @@ import {setDeleteProductIds} from 'slices/multipleDelete/reducer';
 import {variables} from 'utils/constant';
 import {type CategoryDetailsTypes} from 'utils/TypeConfig';
 import {renderCategoryOptions} from 'helpers/CategoryOption';
+import { clearDraft } from 'utils/productDraft';
 
-// representing a table of products listing.
 interface OptionType {
   value: string;
   label: string;
@@ -102,6 +101,10 @@ const ProductTable = (): JSX.Element => {
   const [shouldFetch, setShouldFetch] = useState(false);
 
   const prevCountRef = useRef<number>(selectedCategoryOption.length);
+  useEffect(() => {
+    clearDraft("product_create_draft");
+    clearDraft("product_option_draft");
+  },[])
 
   useEffect(() => {
     const prevCount = prevCountRef.current;

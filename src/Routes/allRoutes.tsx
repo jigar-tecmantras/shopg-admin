@@ -41,6 +41,7 @@ import AreaSpecificSales from 'pages/Area-Sales';
 
 import Policy from 'pages/Policy';
 import PolicyAdd from 'pages/Policy/PolicyAdd';
+import WhatsApp from 'pages/Whats_App';
 
 const authProtectedRoutes = [
   {path: '/dashboard', component: Dashboard},
@@ -80,6 +81,8 @@ const authProtectedRoutes = [
   {path: '/policy-list', component: Policy},
   {path: '/policy-add', component: PolicyAdd},
   {path: '/policy-update/:id', component: PolicyAdd},
+
+  {path: '/whatsapp-management', component: WhatsApp},
 ];
 
 const publicRoutes = [

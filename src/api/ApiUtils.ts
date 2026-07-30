@@ -670,6 +670,31 @@ const ApiUtils = {
       endpoint: apiEndpoints.UPDATE_POLICY,
       data: params,
     }),
+
+  createWhatsapp: async (params: any) => {
+    return await genericApiCall({
+      method: 'POST',
+      endpoint: apiEndpoints.CREATE_WHATSAPP,
+      data: params,
+    });
+  },
+  updateWhatsapp: async (params: any) => {
+    return await genericApiCall({
+      method: 'POST',
+      endpoint: apiEndpoints.EDIT_WHATSAPP,
+      data: params,
+    });
+  },
+  whatsappList: async (params: any) =>
+    await genericApiCall({
+      method: 'GET',
+      endpoint: `${apiEndpoints.GET_WHATSAPP}?${params}`,
+    }),
+  deleteWhatsapp: async (params: any) =>
+    await genericApiCall({
+      method: 'DELETE',
+      endpoint: `${apiEndpoints.DELETE_WHATSAPP}?${params}`,
+    }),
 };
 
 export default ApiUtils;

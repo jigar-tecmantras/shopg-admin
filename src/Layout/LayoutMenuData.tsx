@@ -260,7 +260,7 @@ const Navdata = (): React.JSX.Element => {
     },
     {
       id: 'wishlist',
-      label: 'Wishlist',
+      label: 'Wishlist Management',
       icon: 'bi bi-heart',
       link: '/wishlist',
       click: (e: any) => {
@@ -331,6 +331,15 @@ const Navdata = (): React.JSX.Element => {
       link: '/banner',
       click: (e: any) => {
         handlePageNavigation(e, '/banner');
+      },
+    },
+    {
+      id: 'whatsappManagement',
+      label: 'WhatsApp Management',
+      icon: 'bi bi-whatsapp',
+      link: '/whatsapp-management',
+      click: (e: any) => {
+        handlePageNavigation(e, '/whatsapp-management');
       },
     },
   ];

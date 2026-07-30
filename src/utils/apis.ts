@@ -114,6 +114,11 @@ const apiEndpoints = {
   DELETE_POLICY: '/api/admin/delete-policy',
   ADD_POLICY: '/api/admin/create-policy',
   UPDATE_POLICY: '/api/admin/update-policy',
+
+  GET_WHATSAPP:"/api/admin/get-whatsapp-account",
+  CREATE_WHATSAPP:"/api/admin/create-whatsapp-account",
+  EDIT_WHATSAPP:"/api/admin/update-whatsapp-account",
+  DELETE_WHATSAPP:"/api/admin/delete-whatsapp-account",
 };
 
 export {apiEndpoints};

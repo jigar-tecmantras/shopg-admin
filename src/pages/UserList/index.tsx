@@ -169,15 +169,6 @@ const UserList = (): JSX.Element => {
   };
 
   const columns = [
-    {
-      Header: ' ID',
-      disableFilters: true,
-      filterable: true,
-      accessor: 'id',
-      Cell: (cell: any) => {
-        return <div>{(cell.value as boolean) ? cell.value : '-'}</div>;
-      },
-    },
 
     {
       Header: ' Name',

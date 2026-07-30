@@ -114,15 +114,7 @@ const Wishlist = (): JSX.Element => {
     }
   };
   const columns = [
-    {
-      Header: 'Customer ID',
-      disableFilters: true,
-      filterable: true,
-      accessor: 'customer_id',
-      Cell: (cell: any) => {
-        return <div>{(cell.value as boolean) ? cell.value : '-'}</div>;
-      },
-    },
+    
     {
       Header: 'Product Name',
       accessor: 'product_name',

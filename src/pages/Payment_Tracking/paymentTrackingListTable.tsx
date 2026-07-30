@@ -137,15 +137,7 @@ const PaymentTrackingListTable = (): JSX.Element => {
   };
   const columns = useMemo(
     () => [
-      {
-        Header: 'ID',
-        disableFilters: true,
-        filterable: true,
-        accessor: 'id',
-        Cell: ({cell}: {cell: {value: string}}) => {
-          return <div>{cell.value}</div>;
-        },
-      },
+      
       {
         Header: 'Order Number',
         disableFilters: true,

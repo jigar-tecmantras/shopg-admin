@@ -133,15 +133,7 @@ const RecentOrders = (): any => {
   };
   const columns = useMemo(
     () => [
-      {
-        Header: 'ID',
-        accessor: 'id',
-        disableFilters: true,
-        filterable: true,
-        Cell: (cell: any) => {
-          return <div>{(cell.value as boolean) ? cell.value : '-'}</div>;
-        },
-      },
+      
       {
         Header: 'Order Number',
         accessor: 'order_number',

@@ -326,15 +326,6 @@ const OrderListTable = (): JSX.Element => {
   }, [invoiceUrl]);
   const columns = useMemo(
     () => [
-      {
-        Header: 'ID',
-        accessor: 'id',
-        disableFilters: true,
-        filterable: true,
-        Cell: ({cell}: {cell: {value: string}}) => {
-          return <div>{cell.value}</div>;
-        },
-      },
 
       {
         Header: 'Order Number',

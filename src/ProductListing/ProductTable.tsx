@@ -1,5 +1,20 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import React, {useEffect, useMemo, useRef, useState} from 'react';
+
+// Debounce hook
+const useDebounce = (value: string, delay: number): string => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 import TableContainer from 'Common/TableContainer';
 import {toast} from 'react-toastify';
 import {Button, Card, Col, Container, Form, Row} from 'react-bootstrap';
@@ -40,6 +55,7 @@ const ProductTable = (): JSX.Element => {
   const [sortColumn, setSortColumn] = useState('id');
 
   const [search, setSearch] = useState<string>('');
+  const debouncedSearch = useDebounce(search, 500);
 
   const [sortDirection, setSortDirection] = useState('asc');
 
@@ -200,7 +216,7 @@ const ProductTable = (): JSX.Element => {
       pageSize,
       sortColumn,
       sortDirection,
-      search,
+      debouncedSearch,
       selectedCategoryOption,
     );
 
@@ -209,7 +225,7 @@ const ProductTable = (): JSX.Element => {
     pageValue,
     // pageSize,
     shouldFetch,
-    search,
+    debouncedSearch,
     location,
     selectedCategoryOption,
   ]);
@@ -221,7 +237,7 @@ const ProductTable = (): JSX.Element => {
       pageSize,
       sortColumn,
       sortDirection,
-      search,
+      debouncedSearch,
       selectedCategoryOption,
     );
 
@@ -264,7 +280,7 @@ const ProductTable = (): JSX.Element => {
             pageSize,
             sortColumn,
             sortDirection,
-            search,
+            debouncedSearch,
             selectedCategoryOption,
           );
         })
@@ -293,7 +309,7 @@ const ProductTable = (): JSX.Element => {
       pageSize,
       sortColumn,
       sortDirection,
-      search,
+      debouncedSearch,
       selected,
     );
     // setTotalRecords(defaultPage);
@@ -327,7 +343,7 @@ const ProductTable = (): JSX.Element => {
       pageSize,
       column,
       newSortDirection,
-      search,
+      debouncedSearch,
       selectedCategoryOption,
     );
     setSortDirection(newSortDirection);

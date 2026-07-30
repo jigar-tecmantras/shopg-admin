@@ -16,12 +16,16 @@ function index(): React.JSX.Element {
   const [editOptionData, setEditOptionData] = useState<any>();
   const [editData, setEditData] = useState<any>();
   const [activeKey, setActiveKey] = useState<any>(productTabKeys.DATA);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const search = useLocation().search;
   const productId = new URLSearchParams(search).get('productId');
   const dispatch = useDispatch<any>();
+
   useEffect(() => {
     if (productId != null) {
+      setIsLoading(true);
+
       ApiUtils.getProduct(productId)
         .then((res: any) => {
           setEditData({
@@ -80,8 +84,11 @@ function index(): React.JSX.Element {
             productOption.product_option_value = updateOptionValueData;
             setEditOptionData(productOption);
           }
+          setIsLoading(false);
         })
-        .catch((_err: any) => {});
+        .catch((_err: any) => {
+          setIsLoading(false);
+        });
     }
     dispatch(setisFormUpdate(false));
   }, [productId]);
@@ -98,44 +105,82 @@ function index(): React.JSX.Element {
             }
             pageTitle="Products"
             pageLink="/products"
-          />{' '}
-          <Tab.Container
-            activeKey={activeKey}
-            onSelect={key => {
-              setActiveKey(key);
-            }}>
-            <Nav as="ul" variant="tabs" className="mb-3">
-              <Nav.Item as="li">
-                {' '}
-                <Nav.Link eventKey={productTabKeys.DATA}> Data </Nav.Link>{' '}
-              </Nav.Item>
-              <Nav.Item as="li">
-                {' '}
-                <Nav.Link
-                  disabled={productId == null}
-                  eventKey={productTabKeys.OPTIONS}>
+          />
+          {isLoading && productId != null ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                minHeight: '400px',
+                backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                borderRadius: '8px',
+                marginTop: '20px',
+                gap: '20px',
+              }}>
+              <div
+                style={{
+                  border: '4px solid rgba(0, 0, 0, 0.1)',
+                  borderLeftColor: '#ffffff',
+                  borderRadius: '50%',
+                  width: '40px',
+                  height: '40px',
+                  animation: 'spin 1s linear infinite',
+                }}
+              />
+              <p style={{fontSize: '16px', fontWeight: '500', margin: 0}}>Loading Product...</p>
+            </div>
+          ) : (
+            <Tab.Container
+              activeKey={activeKey}
+              onSelect={key => {
+                setActiveKey(key);
+              }}>
+              <Nav as="ul" variant="tabs" className="mb-3">
+                <Nav.Item as="li">
                   {' '}
-                  Options{' '}
-                </Nav.Link>{' '}
-              </Nav.Item>
-            </Nav>
+                  <Nav.Link eventKey={productTabKeys.DATA}> Data </Nav.Link>{' '}
+                </Nav.Item>
+                <Nav.Item as="li">
+                  {' '}
+                  <Nav.Link
+                    disabled={productId == null}
+                    eventKey={productTabKeys.OPTIONS}>
+                    {' '}
+                    Options{' '}
+                  </Nav.Link>{' '}
+                </Nav.Item>
+              </Nav>
 
-            <Tab.Content className="text-muted">
-              <Tab.Pane eventKey={productTabKeys.DATA} id={productTabKeys.DATA}>
-                <ProductCommon
-                  editData={editData}
-                  setActiveKey={setActiveKey}
-                />
-              </Tab.Pane>
-              <Tab.Pane
-                eventKey={productTabKeys.OPTIONS}
-                id={productTabKeys.OPTIONS}>
-                <ProductOptions editOptionData={editOptionData} />
-              </Tab.Pane>
-            </Tab.Content>
-          </Tab.Container>
+              <Tab.Content className="text-muted">
+                <Tab.Pane eventKey={productTabKeys.DATA} id={productTabKeys.DATA}>
+                  <ProductCommon
+                    editData={editData}
+                    setActiveKey={setActiveKey}
+                  />
+                </Tab.Pane>
+                <Tab.Pane
+                  eventKey={productTabKeys.OPTIONS}
+                  id={productTabKeys.OPTIONS}>
+                  <ProductOptions editOptionData={editOptionData} />
+                </Tab.Pane>
+              </Tab.Content>
+            </Tab.Container>
+          )}
         </Container>
       </div>
+
+      <style>{`
+        @keyframes spin {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </React.Fragment>
   );
 }

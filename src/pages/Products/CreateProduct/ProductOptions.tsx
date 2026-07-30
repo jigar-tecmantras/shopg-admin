@@ -250,7 +250,7 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
     cost_to_company: '',
     product_tag: '',
     sku: '',
-    is_new_arrival: '',
+    is_new_arrival: '1',
     image: [],
   };
 
@@ -1554,7 +1554,7 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
                               className="form-select"
                               id={`is_new_arrival-${index}`}
                               name="is_new_arrival"
-                              value={productOption.is_new_arrival ?? ''}
+                              value={productOption.is_new_arrival ?? '1'}
                               onChange={e => {
                                 const selectedValue = e.target.value;
                                 const data = [
@@ -1587,8 +1587,8 @@ function ProductOptions({editOptionData}: any): React.JSX.Element {
                               }>
                               {/* <option selected>Select your Option</option> */}
 
-                              <option value="1">Yes</option>
-                              <option value="2" selected>
+                              <option value="1" selected>Yes</option>
+                              <option value="2">
                                 No
                               </option>
                             </Form.Select>
